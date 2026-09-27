@@ -77,20 +77,13 @@ Trunk-based con ramas cortas que salen de `main` y vuelven a `main` por pull req
 Los commits siguen Conventional Commits: `feat(tracking): add secure query endpoint`, `docs: add API reference`.
 
 ```mermaid
-gitGraph
-    commit id: "initial commit"
-    commit id: "base técnica (#1)"
-    branch feat/RS-017-login
-    checkout feat/RS-017-login
-    commit id: "feat(auth): hash argon2id"
-    commit id: "test(auth): bloqueo progresivo"
-    checkout main
-    merge feat/RS-017-login id: "squash (#N)"
-    branch docs/nueva-guia
-    checkout docs/nueva-guia
-    commit id: "docs: guía"
-    checkout main
-    merge docs/nueva-guia id: "squash (#N+1)"
+flowchart LR
+    main1(["main"]) --> feat["feat/RS-017-login<br/>feat(auth): hash argon2id<br/>test(auth): bloqueo progresivo"]
+    feat --> pr1{{"PR N: squash merge"}}
+    pr1 --> main2(["main"])
+    main2 --> docs["docs/nueva-guia<br/>docs: guía"]
+    docs --> pr2{{"PR N+1: squash merge"}}
+    pr2 --> main3(["main"])
 ```
 
 ## Pull requests

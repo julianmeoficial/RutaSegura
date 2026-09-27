@@ -10,8 +10,6 @@ Esta base cubre el Sprint 0 hasta la API. Las pantallas llegan cuando estén lis
 - pnpm 11 (`corepack enable` toma la versión de `packageManager`)
 - Docker con Compose v2
 
-
-
 ## Arranque rápido con Docker
 
 ```bash
@@ -39,7 +37,6 @@ El `.env` de la raíz lo leen tanto Compose como Next (`next.config.ts` lo carga
 
 ## Scripts
 
-
 | Comando            | Qué hace                                                  |
 | ------------------ | --------------------------------------------------------- |
 | `pnpm dev`         | Servidor de desarrollo de la app                          |
@@ -52,7 +49,6 @@ El `.env` de la raíz lo leen tanto Compose como Next (`next.config.ts` lo carga
 | `pnpm db:generate` | Genera migraciones con drizzle-kit                        |
 | `pnpm db:migrate`  | Aplica migraciones (paso controlado, nunca por solicitud) |
 | `pnpm docker:up`   | Levanta el entorno completo                               |
-
 
 Para las pruebas de navegador hay que instalar los motores una vez: `pnpm --filter @rutasegura/app exec playwright install chromium webkit`.
 
@@ -74,8 +70,6 @@ packages/database/      cliente Drizzle sobre PostgreSQL y migraciones
 packages/config/        TypeScript, ESLint y Prettier compartidos
 ```
 
-
-
 ### Límites internos
 
 - Todo módulo bajo `src/server` y `packages/database` importa `server-only`: si un Client Component los importa, el build falla.
@@ -83,12 +77,9 @@ packages/config/        TypeScript, ESLint y Prettier compartidos
 - La autorización se decide siempre en el servidor. Ningún endpoint acepta `userId`, `ownerId`, `actorId` ni roles desde el navegador; el dueño se deriva de la sesión.
 - Los errores de la API salen de `apiError()` con un mensaje fijo por código (`packages/contracts/src/errors.ts`), para que casos equivalentes (recurso inexistente frente a ajeno) respondan igual.
 
-
-
 ## Controles frente al análisis HTTP
 
 Cada control responde a un hallazgo del [análisis del protocolo HTTP](https://app.notion.com/p/5d02fd524dd54d9882a908a2ee04bbc6).
-
 
 | Hallazgo                              | Control en esta base                                                                                                                           |
 | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -102,7 +93,6 @@ Cada control responde a un hallazgo del [análisis del protocolo HTTP](https://a
 | H-10 caché compartida                 | `Cache-Control: no-store` en toda respuesta de API                                                                                             |
 | H-01, H-12 staging indexable          | `X-Robots-Tag: noindex, nofollow` en todo entorno distinto de `APP_ENV=production`                                                             |
 
-
 En desarrollo la CSP añade `'unsafe-eval'` y `'unsafe-inline'` en estilos porque React y la recarga en caliente de Next los necesitan; en producción no aparecen. `upgrade-insecure-requests` y HSTS solo se envían cuando la petición llega por HTTPS, porque WebKit aplica esa directiva también a `http://localhost`.
 
 ### Decisiones para las siguientes phases
@@ -110,8 +100,6 @@ En desarrollo la CSP añade `'unsafe-eval'` y `'unsafe-inline'` en estilos porqu
 - Autenticación propia (phase 8): Argon2id, bloqueo progresivo por cuenta e IP con Redis, TOTP opcional y rotación de sesión. Se implementa a mano porque el TCC exige demostrar cada control.
 - Autorización por objeto (phase 9): `assertOwnership` en cada endpoint privado, identificadores ULID y Row Level Security en PostgreSQL como segunda barrera.
 - Documentos (phase 10): bucket privado y URL firmada con vigencia máxima de 300 s (60 s por defecto), validada en `src/server/env.ts`.
-
-
 
 ## Variables de entorno
 
@@ -121,12 +109,9 @@ Solo se versiona `.env.example`. `src/server/env.ts` valida las variables con Zo
 - En Vercel, los secretos se registran por entorno (Development, Preview, Production).
 - Un secreto expuesto se rota de inmediato y se revisa el historial de Git.
 
-
-
 ## Ramas y pull requests
 
 Trunk-based con ramas cortas desde `main`:
-
 
 | Rama                        | Uso                                         |
 | --------------------------- | ------------------------------------------- |
@@ -136,15 +121,12 @@ Trunk-based con ramas cortas desde `main`:
 | `hotfix/RS-###-descripcion` | Corrección urgente de producción            |
 | `chore/RS-###-descripcion`  | Configuración, dependencias o documentación |
 
-
 1. Crear la rama desde `main` y asociarla a la historia de Jira.
 2. Commits pequeños con Conventional Commits, por ejemplo `feat(tracking): add secure query endpoint`.
 3. Abrir la PR temprano para obtener el Preview Deployment.
 4. CI ejecuta formato, lint, typecheck, pruebas, build y la verificación en Chromium y WebKit.
 5. Una aprobación como mínimo y checklist de seguridad de la plantilla completo.
 6. Squash merge y borrado de la rama remota. Las entregas demostrables se etiquetan `v0.1.0`, `v0.2.0`, etc.
-
-
 
 ### Configuración pendiente en las cuentas
 
@@ -165,4 +147,3 @@ Trunk-based con ramas cortas desde `main`:
   EOF
   ```
 - Vercel: un solo proyecto conectado al repositorio con Root Directory `apps/rutasegura`. Producción solo desde `main`; cada PR recibe un Preview Deployment completo. PostgreSQL y Redis son servicios administrados en producción, y las migraciones corren como paso controlado del despliegue.
-

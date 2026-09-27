@@ -33,6 +33,17 @@ Se clasificó como **denegación de servicio en la capa cliente** (STRIDE: Denia
 
 Chromium exime a `http://localhost` de la directiva `upgrade-insecure-requests`; WebKit no. Si la CSP la incluyera siempre, Safari intentaría cargar por HTTPS los recursos del servidor local, fallaría y la página quedaría sin estilos ni scripts: exactamente el tipo de fallo por motor que queremos evitar. Por eso [`proxy.ts`](../apps/rutasegura/src/proxy.ts) solo la añade, junto con HSTS, cuando la petición ya llega por HTTPS.
 
+### Cookies de sesión en WebKit
+
+La misma diferencia afecta a las cookies. Chromium acepta cookies `Secure` en `http://localhost`; Safari las descarta. Si la sesión usara siempre `Secure` y el prefijo `__Host-`, el login funcionaría en Chrome y fallaría en silencio en Safari durante el desarrollo. Por eso [`cookies.ts`](../apps/rutasegura/src/server/auth/cookies.ts) decide por petición:
+
+| Petición | Nombres                        | Atributos                                |
+| -------- | ------------------------------ | ---------------------------------------- |
+| HTTPS    | `__Host-rs_at`, `__Host-rs_rt` | `HttpOnly; SameSite=Lax; Path=/; Secure` |
+| HTTP     | `rs_at`, `rs_rt`               | `HttpOnly; SameSite=Lax; Path=/`         |
+
+En producción todo llega por HTTPS, así que las cookies siempre llevan `Secure` y `__Host-`.
+
 ## ¿Qué se verifica en cada PR?
 
 [`e2e/smoke.spec.ts`](../apps/rutasegura/e2e/smoke.spec.ts) corre con Playwright en tres proyectos definidos en [`playwright.config.ts`](../apps/rutasegura/playwright.config.ts):
@@ -71,11 +82,12 @@ El job `Chromium y WebKit` es un check obligatorio de la protección de `main`: 
 
 ## Evidencia
 
-| Fecha      | Dónde                                                                          | Resultado                                                                                   |
-| ---------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
-| 27/09/2026 | Local, macOS                                                                   | 9 de 9 pruebas en Chromium, WebKit y WebKit iPhone                                          |
-| 27/09/2026 | CI de la [PR #1](https://github.com/julianmeoficial/RutaSegura/pull/1), Ubuntu | Job `Chromium y WebKit` en verde                                                            |
-| 27/09/2026 | Imagen de producción en el navegador                                           | 8 scripts, todos con nonce; único origen de recursos el propio; `crossOriginIsolated: true` |
+| Fecha      | Dónde                                                                          | Resultado                                                                                                     |
+| ---------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| 27/09/2026 | Local, macOS                                                                   | 9 de 9 pruebas en Chromium, WebKit y WebKit iPhone                                                            |
+| 27/09/2026 | CI de la [PR #1](https://github.com/julianmeoficial/RutaSegura/pull/1), Ubuntu | Job `Chromium y WebKit` en verde                                                                              |
+| 27/09/2026 | Imagen de producción en el navegador                                           | 8 scripts, todos con nonce; único origen de recursos el propio; `crossOriginIsolated: true`                   |
+| 27/09/2026 | Login desde el navegador contra Docker, WebKit y Chromium                      | Login `200` y `/auth/me` `200` en ambos; cookies `HttpOnly` y `SameSite=Lax`; `document.cookie` no las expone |
 
 Para repetirla localmente:
 

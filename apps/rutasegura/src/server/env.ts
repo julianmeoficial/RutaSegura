@@ -18,8 +18,18 @@ const envSchema = z
     SESSION_SECRET: secret,
     CSRF_SECRET: secret,
     HMAC_SECRET: secret,
-    SESSION_TTL_SECONDS: positiveInt.default(3600),
+    ACCESS_TOKEN_TTL_SECONDS: positiveInt.max(3600).default(900),
+    SESSION_TTL_SECONDS: positiveInt.default(28_800),
 
+    LOCKOUT_THRESHOLD: positiveInt.default(5),
+    LOCKOUT_BASE_SECONDS: positiveInt.default(300),
+    LOCKOUT_MAX_SECONDS: positiveInt.default(3600),
+
+    LOGIN_RATE_LIMIT_IP_MAX: positiveInt.default(10),
+    LOGIN_RATE_LIMIT_EMAIL_MAX: positiveInt.default(10),
+    LOGIN_RATE_LIMIT_WINDOW_SECONDS: positiveInt.default(900),
+    REGISTER_RATE_LIMIT_MAX: positiveInt.default(5),
+    REGISTER_RATE_LIMIT_WINDOW_SECONDS: positiveInt.default(3600),
     TRACKING_RATE_LIMIT_MAX: positiveInt.default(5),
     TRACKING_RATE_LIMIT_WINDOW_SECONDS: positiveInt.default(900),
 

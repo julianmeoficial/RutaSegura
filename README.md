@@ -28,8 +28,10 @@ Compose levanta la app, PostgreSQL 17 y Redis 7. El health check responde `200` 
 | `pnpm typecheck`                       | TypeScript en todos los paquetes            |
 | `pnpm test`                            | Pruebas unitarias                           |
 | `pnpm test:e2e`                        | Pruebas en Chromium, WebKit y WebKit iPhone |
+| `pnpm test:smoke`                      | Smoke de autenticación contra Docker        |
 | `pnpm format`                          | Prettier                                    |
 | `pnpm db:generate` / `pnpm db:migrate` | Migraciones                                 |
+| `pnpm db:seed`                         | Datos ficticios de desarrollo               |
 | `pnpm docker:up` / `pnpm docker:down`  | Entorno completo                            |
 
 ## Documentación
@@ -40,6 +42,7 @@ Compose levanta la app, PostgreSQL 17 y Redis 7. El health check responde `200` 
 | [API](docs/api.md)                                                  | Contrato de `/api/v1` y códigos de error                                      |
 | [Paquetes](docs/paquetes.md)                                        | Workspace, dependencias y versiones                                           |
 | [Seguridad](docs/seguridad.md)                                      | Hallazgos del sitio de referencia y controles de RutaSegura                   |
+| [Autenticación](docs/autenticacion.md)                              | Argon2id, bloqueo, JWT, rate limiting, rastreo de doble dato y auditoría      |
 | [Compatibilidad de navegadores](docs/compatibilidad-navegadores.md) | WebKit y Chromium como criterio de aceptación                                 |
 | [Desarrollo](docs/desarrollo.md)                                    | Entorno local, ramas (`feat/`, `fix/`, `hotfix/`, `chore/`, `docs/`), PR y CI |
 | [CHANGELOG](CHANGELOG.md)                                           | Historial de versiones                                                        |

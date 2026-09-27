@@ -6,23 +6,38 @@ RutaSegura se diseña para no repetir las debilidades del [análisis observacion
 
 ## Hallazgos del sitio de referencia y controles de RutaSegura
 
-| Hallazgo | Qué se observó                                             | Control en RutaSegura                                                                             | Dónde vive                            |
-| -------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| H-00     | Vista de rastreo en negro en Chromium, funcional en WebKit | Render en servidor, cero terceros, verificación en Chromium, WebKit y WebKit iPhone en cada PR    | `layout.tsx`, `e2e/smoke.spec.ts`, CI |
-| H-01     | Ambiente de pruebas público e indexable                    | `X-Robots-Tag: noindex, nofollow` en todo entorno distinto de producción                          | `proxy.ts`                            |
-| H-02     | `X-Powered-By: PHP/8.2.33`                                 | `poweredByHeader: false`                                                                          | `next.config.ts`                      |
-| H-03     | CSP con `'unsafe-inline'` y `'unsafe-eval'`                | CSP con nonce por petición y `'strict-dynamic'`; sin `unsafe-*` en producción                     | `security-headers.ts`, `proxy.ts`     |
-| H-04     | Cookies con `SameSite=None` y sin `HttpOnly`               | Cookie de sesión propia `HttpOnly; Secure; SameSite=Lax`, sin cookies de terceros                 | Phase 8                               |
-| H-05     | Infraestructura compartida entre pruebas y producción      | Secretos por entorno; la app no arranca en producción con valores de ejemplo                      | `env.ts`, `startup.ts`                |
-| H-06     | Seis orígenes de terceros confiados en la CSP              | Ningún origen externo en la CSP; sin scripts, fuentes ni estilos de terceros                      | `security-headers.ts`                 |
-| H-07     | `connect-src` e `img-src` con comodín `https:`             | `connect-src 'self'`; `img-src 'self' blob: data:`                                                | `security-headers.ts`                 |
-| H-08     | HSTS sin `preload`                                         | `max-age=63072000; includeSubDomains; preload` sobre HTTPS                                        | `proxy.ts`                            |
-| H-09     | Sin `COOP`, `COEP` ni `CORP`                               | Las tres cabeceras en todas las respuestas; el documento queda `crossOriginIsolated`              | `security-headers.ts`                 |
-| H-10     | HTML cacheado un año en caché compartida                   | `Cache-Control: no-store` en la API; documentos renderizados por petición con `private, no-store` | `proxy.ts`, `layout.tsx`              |
-| H-11     | Banner `server` y `ETag` expuestos                         | `generateEtags: false`; sin cabecera `Server` con producto o versión                              | `next.config.ts`                      |
-| H-12     | Política de indexación distinta entre dominios             | Una sola política, decidida por `APP_ENV`                                                         | `proxy.ts`                            |
+| Hallazgo | Qué se observó                                             | Control en RutaSegura                                                                                             | Dónde vive                            |
+| -------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| H-00     | Vista de rastreo en negro en Chromium, funcional en WebKit | Render en servidor, cero terceros, verificación en Chromium, WebKit y WebKit iPhone en cada PR                    | `layout.tsx`, `e2e/smoke.spec.ts`, CI |
+| H-01     | Ambiente de pruebas público e indexable                    | `X-Robots-Tag: noindex, nofollow` en todo entorno distinto de producción                                          | `proxy.ts`                            |
+| H-02     | `X-Powered-By: PHP/8.2.33`                                 | `poweredByHeader: false`                                                                                          | `next.config.ts`                      |
+| H-03     | CSP con `'unsafe-inline'` y `'unsafe-eval'`                | CSP con nonce por petición y `'strict-dynamic'`; sin `unsafe-*` en producción                                     | `security-headers.ts`, `proxy.ts`     |
+| H-04     | Cookies con `SameSite=None` y sin `HttpOnly`               | Cookies de sesión propias `HttpOnly; SameSite=Lax`, con `Secure` y `__Host-` sobre HTTPS; sin cookies de terceros | `server/auth/cookies.ts`              |
+| H-05     | Infraestructura compartida entre pruebas y producción      | Secretos por entorno; la app no arranca en producción con valores de ejemplo                                      | `env.ts`, `startup.ts`                |
+| H-06     | Seis orígenes de terceros confiados en la CSP              | Ningún origen externo en la CSP; sin scripts, fuentes ni estilos de terceros                                      | `security-headers.ts`                 |
+| H-07     | `connect-src` e `img-src` con comodín `https:`             | `connect-src 'self'`; `img-src 'self' blob: data:`                                                                | `security-headers.ts`                 |
+| H-08     | HSTS sin `preload`                                         | `max-age=63072000; includeSubDomains; preload` sobre HTTPS                                                        | `proxy.ts`                            |
+| H-09     | Sin `COOP`, `COEP` ni `CORP`                               | Las tres cabeceras en todas las respuestas; el documento queda `crossOriginIsolated`                              | `security-headers.ts`                 |
+| H-10     | HTML cacheado un año en caché compartida                   | `Cache-Control: no-store` en la API; documentos renderizados por petición con `private, no-store`                 | `proxy.ts`, `layout.tsx`              |
+| H-11     | Banner `server` y `ETag` expuestos                         | `generateEtags: false`; sin cabecera `Server` con producto o versión                                              | `next.config.ts`                      |
+| H-12     | Política de indexación distinta entre dominios             | Una sola política, decidida por `APP_ENV`                                                                         | `proxy.ts`                            |
 
 Los hallazgos H-03, H-04, H-06 y H-07 forman una sola cadena de ataque en el sitio de referencia: se puede inyectar un script, la cookie es legible, el destino de exfiltración está permitido y un tercero puede ser la puerta de entrada. RutaSegura rompe los cuatro eslabones a la vez.
+
+## Autenticación y rastreo
+
+Desde el Sprint 1, RutaSegura cubre OWASP A07 y A01 con estos controles; el detalle está en [autenticacion.md](autenticacion.md):
+
+- Contraseñas con Argon2id (parámetros de OWASP) y política NIST de 12 a 128 caracteres.
+- Bloqueo progresivo por cuenta: 5 fallos, 5 min que se duplican hasta 1 h.
+- JWT HS256 de 15 min en cookie `HttpOnly`, verificado contra la sesión en cada ruta protegida; refresh token rotativo con detección de reutilización.
+- Rechazo (403) de mutaciones de la API desde otro origen, además de `SameSite=Lax`.
+- Rate limiting en Redis por IP, correo y guía, con 429 y `Retry-After`; falla cerrado si Redis cae.
+- Respuestas idénticas para cuenta inexistente, contraseña incorrecta y cuenta bloqueada, y para guía inexistente y segundo dato incorrecto.
+- Rastreo con número de guía y últimos 4 dígitos del teléfono, guardados como HMAC.
+- Bitácora `auth_events` sin datos personales en claro.
+
+**Requisito de despliegue:** la app debe ir detrás de un proxy que sobrescriba o extienda `X-Forwarded-For` (Vercel, nginx, Caddy). Sin él, el límite por IP es evadible; los límites por correo y por guía y el bloqueo por cuenta no dependen de la IP.
 
 ## Recorrido de una petición
 
@@ -121,8 +136,7 @@ En desarrollo, y solo ahí, la CSP añade `'unsafe-eval'` en scripts y `'unsafe-
 
 | Control                                                                                     | Riesgo OWASP | Phase   |
 | ------------------------------------------------------------------------------------------- | ------------ | ------- |
-| Hash Argon2id, bloqueo progresivo por cuenta e IP, TOTP opcional, rotación de sesión        | A07          | 8       |
-| Rastreo con guía más segundo dato del destinatario, límite de intentos y respuesta uniforme | A01          | 8       |
+| TOTP opcional como segundo factor                                                           | A07          | 8       |
 | `assertOwnership` en cada endpoint privado, ULID, RLS en PostgreSQL y bitácora de auditoría | A01, A09     | 9       |
 | Bucket privado y URLs firmadas de corta duración                                            | A05          | 10      |
 | Checklist ASVS L1, pentesting y re-test antes/después                                       | Todas        | 14 a 17 |
@@ -132,6 +146,7 @@ En desarrollo, y solo ahí, la CSP añade `'unsafe-eval'` en scripts y `'unsafe-
 ```bash
 curl -sI https://<dominio>/            # CSP con nonce, COOP, COEP, CORP, HSTS
 curl -si https://<dominio>/api/v1/health
-pnpm test                              # CSP, proxy, entorno y health check
+pnpm test                              # CSP, proxy, entorno, health check, auth y rate limit
 pnpm test:e2e                          # Chromium, WebKit y WebKit iPhone
+pnpm test:smoke                        # Autenticación y rastreo contra Docker
 ```

@@ -29,6 +29,51 @@ describe("proxy", () => {
     expect(https.headers.get("strict-transport-security")).toContain("preload");
   });
 
+  it("rechaza mutaciones de la API desde otro origen", async () => {
+    const response = proxy(
+      new NextRequest("http://localhost:3000/api/v1/auth/login", {
+        method: "POST",
+        headers: { host: "localhost:3000", origin: "https://atacante.example" },
+      }),
+    );
+    expect(response.status).toBe(403);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect((await response.json()).error.code).toBe("forbidden");
+  });
+
+  it("rechaza mutaciones marcadas como cross-site por el navegador", () => {
+    const response = proxy(
+      new NextRequest("http://localhost:3000/api/v1/auth/logout", {
+        method: "POST",
+        headers: { host: "localhost:3000", "sec-fetch-site": "cross-site" },
+      }),
+    );
+    expect(response.status).toBe(403);
+  });
+
+  it("deja pasar mutaciones del mismo origen, clientes sin Origin y lecturas", () => {
+    const sameOrigin = proxy(
+      new NextRequest("http://localhost:3000/api/v1/auth/login", {
+        method: "POST",
+        headers: { host: "localhost:3000", origin: "http://localhost:3000" },
+      }),
+    );
+    const noOrigin = proxy(
+      new NextRequest("http://localhost:3000/api/v1/auth/login", {
+        method: "POST",
+        headers: { host: "localhost:3000" },
+      }),
+    );
+    const crossRead = proxy(
+      new NextRequest("http://localhost:3000/api/v1/health", {
+        headers: { host: "localhost:3000", origin: "https://otro.example" },
+      }),
+    );
+    expect(sameOrigin.status).toBe(200);
+    expect(noOrigin.status).toBe(200);
+    expect(crossRead.status).toBe(200);
+  });
+
   it("pide no indexar fuera de producción", () => {
     vi.stubEnv("APP_ENV", "preview");
     expect(proxy(new NextRequest("http://localhost/")).headers.get("x-robots-tag")).toBe(

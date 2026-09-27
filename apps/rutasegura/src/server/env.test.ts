@@ -49,6 +49,19 @@ describe("parseEnv", () => {
     expect(env.APP_ENV).toBe("production");
   });
 
+  it("aplica los valores por defecto de sesión, bloqueo y rate limit", () => {
+    const env = parseEnv(validLocal);
+    expect(env.ACCESS_TOKEN_TTL_SECONDS).toBe(900);
+    expect(env.LOCKOUT_THRESHOLD).toBe(5);
+    expect(env.LOGIN_RATE_LIMIT_IP_MAX).toBe(10);
+  });
+
+  it("no permite access tokens de más de una hora", () => {
+    expect(() => parseEnv({ ...validLocal, ACCESS_TOKEN_TTL_SECONDS: "7200" })).toThrow(
+      /ACCESS_TOKEN_TTL_SECONDS/,
+    );
+  });
+
   it("limita la vigencia de las URLs firmadas", () => {
     expect(() => parseEnv({ ...validLocal, SIGNED_URL_TTL_SECONDS: "3600" })).toThrow(
       /SIGNED_URL_TTL_SECONDS/,

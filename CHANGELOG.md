@@ -6,12 +6,25 @@ Todos los cambios relevantes de RutaSegura se registran aquí. El formato sigue 
 
 ### Añadido
 
+- Sprint 1, autenticación en el servidor (OWASP A07):
+  - `POST /api/v1/auth/register`, `login`, `refresh`, `logout` y `GET /api/v1/auth/me`.
+  - Contraseñas con Argon2id (19 MiB, t=2, p=1) y política NIST de 12 a 128 caracteres.
+  - Bloqueo progresivo por cuenta: 5 fallos, 5 min que se duplican hasta 1 h.
+  - JWT HS256 de 15 min y refresh token rotativo con detección de reutilización, en cookies `HttpOnly; SameSite=Lax` (`Secure` y `__Host-` sobre HTTPS).
+  - Rechazo de mutaciones de la API desde otro origen en `proxy.ts`.
+- Rastreo de doble dato (OWASP A01): `POST /api/v1/tracking` con número de guía y últimos 4 dígitos del teléfono, guardados como HMAC; respuesta 404 uniforme.
+- Rate limiting en Redis por IP, correo y guía, con 429, `Retry-After` y cabeceras `RateLimit-*`.
+- Bitácora `auth_events` sin datos personales en claro.
+- Esquema de base de datos y primera migración (`users`, `sessions`, `auth_events`, `shipments`, `shipment_events`), semilla idempotente con guías ficticias y servicio `migrate` en Compose.
+- Pruebas smoke de autenticación contra Docker (`pnpm test:smoke`) y job de CI `Smoke auth en Docker`.
+- `docs/autenticacion.md` y endpoints nuevos en `docs/api.md`.
 - Documentación en `docs/`: arquitectura, API, paquetes, seguridad, compatibilidad con WebKit y Chromium, y guía de desarrollo, con diagramas de los flujos principales.
 - Este CHANGELOG.
 - Tipo de rama `docs/` en la convención de ramas.
 
 ### Cambiado
 
+- `SESSION_TTL_SECONDS` pasa a ser la vida de la sesión de refresh (8 h por defecto); nuevas variables `ACCESS_TOKEN_TTL_SECONDS`, `LOCKOUT_*`, `LOGIN_RATE_LIMIT_*` y `REGISTER_RATE_LIMIT_*`.
 - El README se reduce a la descripción, el arranque rápido y los scripts; el resto se mueve a `docs/`.
 - `CODEOWNERS` incluye a Mónica y a Julián en todas las reglas para que cada PR pida la revisión cruzada ([#2](https://github.com/julianmeoficial/RutaSegura/pull/2), pendiente de aprobación).
 

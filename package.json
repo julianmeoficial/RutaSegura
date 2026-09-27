@@ -1,0 +1,28 @@
+{
+  "name": "rutasegura",
+  "private": true,
+  "packageManager": "pnpm@11.24.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @rutasegura/app dev",
+    "build": "pnpm --filter @rutasegura/app build",
+    "start": "pnpm --filter @rutasegura/app start",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "test:e2e": "pnpm --filter @rutasegura/app test:e2e",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:generate": "pnpm --filter @rutasegura/database db:generate",
+    "db:migrate": "pnpm --filter @rutasegura/database db:migrate",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down"
+  },
+  "devDependencies": {
+    "@rutasegura/config": "workspace:*",
+    "prettier": "3.9.9",
+    "turbo": "2.11.4"
+  }
+}

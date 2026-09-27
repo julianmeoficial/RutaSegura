@@ -1,0 +1,37 @@
+# Dependencias
+node_modules/
+.pnpm-store/
+
+# Builds
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+next-env.d.ts
+.turbo/
+
+# Pruebas y cobertura
+coverage/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Entorno: solo se versiona .env.example
+.env
+.env.*
+!.env.example
+
+# Vercel
+.vercel/
+
+# Sistema y editores
+.DS_Store
+*.pem
+*.log
+npm-debug.log*
+pnpm-debug.log*
+.idea/
+.vscode/*
+!.vscode/extensions.json

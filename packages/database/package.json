@@ -1,0 +1,27 @@
+{
+  "name": "@rutasegura/database",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
+  },
+  "dependencies": {
+    "drizzle-orm": "0.45.3",
+    "postgres": "3.4.9",
+    "server-only": "0.0.1"
+  },
+  "devDependencies": {
+    "@rutasegura/config": "workspace:*",
+    "@types/node": "22.20.4",
+    "drizzle-kit": "0.31.11",
+    "eslint": "9.39.5",
+    "typescript": "6.0.3"
+  }
+}

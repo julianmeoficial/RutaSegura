@@ -1,0 +1,10 @@
+# Revisores obligatorios por área. Añadir los usuarios de GitHub del equipo
+# cuando se confirmen (Mónica en UI, Alexa en criterios de aceptación).
+*                                   @julianmeoficial
+
+# Frontera de seguridad: autenticación, autorización, datos y cabeceras.
+/apps/rutasegura/src/server/        @julianmeoficial
+/apps/rutasegura/src/proxy.ts       @julianmeoficial
+/apps/rutasegura/src/lib/security-headers.ts @julianmeoficial
+/packages/database/                 @julianmeoficial
+/.github/                           @julianmeoficial

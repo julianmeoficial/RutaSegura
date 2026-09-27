@@ -1,0 +1,7 @@
+pnpm-lock.yaml
+.next/
+.turbo/
+coverage/
+playwright-report/
+test-results/
+packages/database/drizzle/

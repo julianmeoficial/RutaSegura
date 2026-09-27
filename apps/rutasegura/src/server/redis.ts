@@ -20,9 +20,20 @@ export function getRedis(redisUrl: string): Redis {
   return globalForRedis.rutaseguraRedis;
 }
 
-export async function pingRedis(client: Redis): Promise<void> {
+async function ensureConnected(client: Redis): Promise<void> {
   if (client.status === "wait" || client.status === "end") {
     await client.connect();
   }
+}
+
+export async function pingRedis(client: Redis): Promise<void> {
+  await ensureConnected(client);
   await client.ping();
+}
+
+/** Cliente listo para comandos; lanza si Redis no está disponible. */
+export async function getConnectedRedis(redisUrl: string): Promise<Redis> {
+  const client = getRedis(redisUrl);
+  await ensureConnected(client);
+  return client;
 }

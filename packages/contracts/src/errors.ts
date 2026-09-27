@@ -9,8 +9,10 @@ import { z } from "zod";
 export const apiErrorCodeSchema = z.enum([
   "bad_request",
   "unauthorized",
+  "invalid_credentials",
   "forbidden",
   "not_found",
+  "tracking_not_found",
   "rate_limited",
   "internal_error",
   "service_unavailable",
@@ -30,8 +32,16 @@ export type ApiError = z.infer<typeof apiErrorSchema>;
 export const API_ERRORS = {
   bad_request: { status: 400, message: "La solicitud no es válida." },
   unauthorized: { status: 401, message: "No fue posible verificar la solicitud." },
+  invalid_credentials: {
+    status: 401,
+    message: "Correo o contraseña incorrectos, o la cuenta está bloqueada temporalmente.",
+  },
   forbidden: { status: 403, message: "No tienes acceso a este recurso." },
   not_found: { status: 404, message: "El recurso solicitado no existe." },
+  tracking_not_found: {
+    status: 404,
+    message: "No encontramos un envío con ese número de guía y esos datos.",
+  },
   rate_limited: {
     status: 429,
     message: "Demasiados intentos. Vuelve a intentarlo más tarde.",

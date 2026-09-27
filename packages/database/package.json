@@ -4,13 +4,15 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./tracking-digest": "./src/tracking-digest.ts"
   },
   "scripts": {
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "db:seed": "tsx src/seed.ts"
   },
   "dependencies": {
     "drizzle-orm": "0.45.3",
@@ -22,6 +24,7 @@
     "@types/node": "22.20.4",
     "drizzle-kit": "0.31.11",
     "eslint": "9.39.5",
+    "tsx": "4.23.15",
     "typescript": "6.0.3"
   }
 }

@@ -32,3 +32,4 @@ export async function pingDatabase(db: Database): Promise<void> {
 }
 
 export { schema };
+export { phoneLast4Digest } from "./tracking-digest";

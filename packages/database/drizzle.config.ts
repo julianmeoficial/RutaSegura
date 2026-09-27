@@ -1,4 +1,7 @@
 import { defineConfig } from "drizzle-kit";
+import { loadRootEnv } from "./src/load-env";
+
+loadRootEnv();
 
 const url = process.env.DATABASE_URL;
 if (!url) {

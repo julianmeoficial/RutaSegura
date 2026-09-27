@@ -13,10 +13,12 @@
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "test:e2e": "pnpm --filter @rutasegura/app test:e2e",
+    "test:smoke": "./scripts/smoke-auth.sh",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:generate": "pnpm --filter @rutasegura/database db:generate",
     "db:migrate": "pnpm --filter @rutasegura/database db:migrate",
+    "db:seed": "pnpm --filter @rutasegura/database db:seed",
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down"
   },

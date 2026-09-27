@@ -1,10 +1,19 @@
-# Revisores obligatorios por área. Añadir los usuarios de GitHub del equipo
-# cuando se confirmen (Mónica en UI, Alexa en criterios de aceptación).
-*                                   @julianmeoficial
+# Cada PR necesita la aprobación del otro dev: ambos figuran en todas las
+# reglas para que GitHub pida la revisión cruzada automáticamente.
+# La última regla que coincide es la que aplica.
+*                                            @julianmeoficial @Monicav13
 
-# Frontera de seguridad: autenticación, autorización, datos y cabeceras.
-/apps/rutasegura/src/server/        @julianmeoficial
-/apps/rutasegura/src/proxy.ts       @julianmeoficial
-/apps/rutasegura/src/lib/security-headers.ts @julianmeoficial
-/packages/database/                 @julianmeoficial
-/.github/                           @julianmeoficial
+# Interfaz: Mónica lidera, Julián revisa.
+/apps/rutasegura/src/app/(public)/           @Monicav13 @julianmeoficial
+/apps/rutasegura/src/app/(portal)/           @Monicav13 @julianmeoficial
+/apps/rutasegura/src/components/             @Monicav13 @julianmeoficial
+/apps/rutasegura/src/features/               @Monicav13 @julianmeoficial
+/apps/rutasegura/src/app/globals.css         @Monicav13 @julianmeoficial
+
+# Frontera de seguridad: Julián lidera, Mónica revisa.
+/apps/rutasegura/src/server/                 @julianmeoficial @Monicav13
+/apps/rutasegura/src/app/api/                @julianmeoficial @Monicav13
+/apps/rutasegura/src/proxy.ts                @julianmeoficial @Monicav13
+/apps/rutasegura/src/lib/security-headers.ts @julianmeoficial @Monicav13
+/packages/database/                          @julianmeoficial @Monicav13
+/.github/                                    @julianmeoficial @Monicav13

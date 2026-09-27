@@ -15,6 +15,10 @@ Todos los cambios relevantes de RutaSegura se registran aquí. El formato sigue 
 - El README se reduce a la descripción, el arranque rápido y los scripts; el resto se mueve a `docs/`.
 - `CODEOWNERS` incluye a Mónica y a Julián en todas las reglas para que cada PR pida la revisión cruzada ([#2](https://github.com/julianmeoficial/RutaSegura/pull/2), pendiente de aprobación).
 
+### Corregido
+
+- El diagrama de ramas de `docs/desarrollo.md` pasa de `gitGraph` a `flowchart`, que también se dibuja en visores con versiones antiguas de Mermaid.
+
 ## [0.1.0] - 2026-09-27
 
 Base técnica del Sprint 0 hasta la API ([#1](https://github.com/julianmeoficial/RutaSegura/pull/1)).

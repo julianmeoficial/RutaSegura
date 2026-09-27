@@ -33,7 +33,7 @@ Se clasificó como **denegación de servicio en la capa cliente** (STRIDE: Denia
 
 Chromium exime a `http://localhost` de la directiva `upgrade-insecure-requests`; WebKit no. Si la CSP la incluyera siempre, Safari intentaría cargar por HTTPS los recursos del servidor local, fallaría y la página quedaría sin estilos ni scripts: exactamente el tipo de fallo por motor que queremos evitar. Por eso [`proxy.ts`](../apps/rutasegura/src/proxy.ts) solo la añade, junto con HSTS, cuando la petición ya llega por HTTPS.
 
-## Qué se verifica en cada PR
+## ¿Qué se verifica en cada PR?
 
 [`e2e/smoke.spec.ts`](../apps/rutasegura/e2e/smoke.spec.ts) corre con Playwright en tres proyectos definidos en [`playwright.config.ts`](../apps/rutasegura/playwright.config.ts):
 

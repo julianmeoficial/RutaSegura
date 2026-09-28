@@ -2,7 +2,7 @@
 
 Todos los cambios relevantes de RutaSegura se registran aquí. El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
-## [Unreleased]
+## [Unreleased](https://github.com/julianmeoficial/RutaSegura/compare/acd29ee...HEAD)
 
 ### Añadido
 
@@ -21,18 +21,29 @@ Todos los cambios relevantes de RutaSegura se registran aquí. El formato sigue 
 - Documentación en `docs/`: arquitectura, API, paquetes, seguridad, compatibilidad con WebKit y Chromium, y guía de desarrollo, con diagramas de los flujos principales.
 - Este CHANGELOG.
 - Tipo de rama `docs/` en la convención de ramas.
+- Phase 9, agenda de entregas (OWASP A01 y A09), solo API:
+  - `POST /api/v1/shipments/claim`, `GET /api/v1/shipments`, `GET /api/v1/shipments/{id}` y `PATCH /api/v1/shipments/{id}/schedule`.
+  - `assertOwnership` por objeto; envío ajeno o inexistente responde `404 not_found`, sin sesión `401`.
+  - Identificadores ULID en la API; el UUID interno no sale del servidor.
+  - Franjas de 2 h de lunes a viernes en `America/Bogota`, con inicio estrictamente futuro; nuevo error `invalid_schedule`.
+  - Migración `0001`: `owner_id`, `public_id`, `window_date` y `window_slot` en `shipments`; tablas `shipment_audit_events` y `notifications`; políticas RLS por `app.user_id` y `app.mode`.
+  - Bitácora de envíos sin datos personales en claro y avisos simulados con cuerpo genérico.
+  - Rate limit por usuario para listar, consultar y agendar (`SHIPMENTS_RATE_LIMIT_*`).
+  - Casos smoke de IDOR: Bob recibe 404 sobre el envío de Alice.
 
 ### Cambiado
 
 - `SESSION_TTL_SECONDS` pasa a ser la vida de la sesión de refresh (8 h por defecto); nuevas variables `ACCESS_TOKEN_TTL_SECONDS`, `LOCKOUT_*`, `LOGIN_RATE_LIMIT_*` y `REGISTER_RATE_LIMIT_*`.
 - El README se reduce a la descripción, el arranque rápido y los scripts; el resto se mueve a `docs/`.
+- La guía ficticia `RS0000000001` queda en tránsito en la semilla para poder agendarla; el smoke la restablece en cada ejecución.
+- El rastreo público consulta dentro de una transacción con el modo RLS `public_tracking`; su contrato no cambia.
 - `CODEOWNERS` incluye a Mónica y a Julián en todas las reglas para que cada PR pida la revisión cruzada ([#2](https://github.com/julianmeoficial/RutaSegura/pull/2), pendiente de aprobación).
 
 ### Corregido
 
 - El diagrama de ramas de `docs/desarrollo.md` pasa de `gitGraph` a `flowchart`, que también se dibuja en visores con versiones antiguas de Mermaid.
 
-## [0.1.0] - 2026-09-27
+## [0.1.0](https://github.com/julianmeoficial/RutaSegura/pull/1) - 2026-09-27
 
 Base técnica del Sprint 0 hasta la API ([#1](https://github.com/julianmeoficial/RutaSegura/pull/1)).
 
@@ -56,6 +67,3 @@ Base técnica del Sprint 0 hasta la API ([#1](https://github.com/julianmeoficial
 - Sin cabeceras `X-Powered-By`, `Server` ni `ETag`.
 - PostgreSQL y Redis publicados solo en `127.0.0.1`.
 - pnpm solo permite scripts de instalación a `esbuild` y `unrs-resolver`.
-
-[Unreleased]: https://github.com/julianmeoficial/RutaSegura/compare/acd29ee...HEAD
-[0.1.0]: https://github.com/julianmeoficial/RutaSegura/pull/1

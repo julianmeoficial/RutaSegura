@@ -39,6 +39,42 @@ Desde el Sprint 1, RutaSegura cubre OWASP A07 y A01 con estos controles; el deta
 
 **Requisito de despliegue:** la app debe ir detrás de un proxy que sobrescriba o extienda `X-Forwarded-For` (Vercel, nginx, Caddy). Sin él, el límite por IP es evadible; los límites por correo y por guía y el bloqueo por cuenta no dependen de la IP.
 
+## Autorización por objeto
+
+Desde la Phase 9 la API de envíos ([api.md](api.md#envíos-y-agenda)) cubre OWASP A01 (IDOR) y A09 con estas capas:
+
+| Capa               | Control                                                                                                                                    | Dónde vive                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
+| Identidad          | El dueño sale de `authenticate()`; los contratos `.strict()` rechazan `ownerId` y `userId`                                                 | `require-user.ts`, `contracts/shipments.ts` |
+| Autorización       | `assertOwnership({ ownerId }, userId)` por igualdad exacta en cada lectura y escritura; `ownerId` nulo no es de nadie                      | `server/authorization/ownership.ts`         |
+| Respuesta uniforme | Ajeno, inexistente o mal formado: `404 not_found`, nunca `403`. `OwnershipError` se traduce a 404 en `withErrorHandling`                   | `server/http/guards.ts`                     |
+| Identificadores    | ULID de 128 bits (80 aleatorios, `crypto.randomBytes`) en la API; el UUID interno no sale del servidor                                     | `server/ids/ulid.ts`                        |
+| Reclamo            | Guía más últimos 4 dígitos, con el mismo HMAC y los mismos límites que el rastreo; guía de otro usuario responde 404                       | `services/shipments.ts`                     |
+| RLS en PostgreSQL  | Políticas sobre `owner_id = app.user_id` en `shipments`; eventos, bitácora y avisos heredan la visibilidad del envío o del usuario         | migración `0001_shipments_agenda.sql`       |
+| Bitácora           | `shipment_audit_events`: `claimed`, `scheduled`, `rescheduled`, `status_changed`, con actor por id interno; sin IP, correo, guía ni nombre | `repositories/shipments.ts`                 |
+| Avisos             | Cuerpo fijo sin guía, ULID, nombre, teléfono, dirección, ciudad ni franja                                                                  | `server/notifications/simulate.ts`          |
+| Rate limit         | 60 peticiones por minuto por usuario (clave con HMAC del id) para listar, consultar y agendar                                              | `rate-limit/policies.ts`                    |
+
+### RLS como defensa en profundidad
+
+Cada petición abre una transacción y fija `app.user_id` y, cuando aplica, `app.mode` con `set_config(..., true)` (equivalente a `SET LOCAL`): el valor muere con la transacción y no pasa a otra petición que reutilice la conexión del pool.
+
+| `app.mode`        | Quién lo usa                | Qué permite                                                                 |
+| ----------------- | --------------------------- | --------------------------------------------------------------------------- |
+| _(vacío)_         | Listar, consultar y agendar | Solo filas con `owner_id = app.user_id`                                     |
+| `public_tracking` | `services/tracking.ts`      | `SELECT` de envíos y eventos; el filtro por guía y dígitos lo hace la app   |
+| `claim`           | Reclamo                     | `SELECT` por guía y `UPDATE` solo si `owner_id IS NULL` y queda como propio |
+| `operator`        | `transitionShipmentStatus`  | Cambio de estado, evento de rastreo y aviso al dueño                        |
+
+El control que cuenta en la API es `assertOwnership`; la RLS evita que un error en una consulta futura exponga filas ajenas. Límites conocidos:
+
+- **PostgreSQL no aplica RLS al dueño de la tabla** (salvo `FORCE ROW LEVEL SECURITY`). En Compose el rol `rutasegura` es dueño, así que en desarrollo las políticas no se ejercitan. En producción el runtime debe conectarse con un rol **no dueño** con `SELECT`, `INSERT` y `UPDATE` sobre estas tablas, y las migraciones con otro rol dueño.
+- `app.user_id` y `app.mode` los fija la aplicación: protegen contra errores de la app, no contra quien ya tenga una conexión a la base.
+
+### Retención
+
+`shipment_audit_events` y `notifications` se conservan 365 días. En este sprint no hay tarea de purga; queda pendiente para el hardening.
+
 ## Recorrido de una petición
 
 [`proxy.ts`](../apps/rutasegura/src/proxy.ts) se ejecuta en toda petición salvo los recursos estáticos de `_next` y las precargas de navegación.
@@ -134,12 +170,13 @@ En desarrollo, y solo ahí, la CSP añade `'unsafe-eval'` en scripts y `'unsafe-
 
 ## Controles pendientes
 
-| Control                                                                                     | Riesgo OWASP | Phase   |
-| ------------------------------------------------------------------------------------------- | ------------ | ------- |
-| TOTP opcional como segundo factor                                                           | A07          | 8       |
-| `assertOwnership` en cada endpoint privado, ULID, RLS en PostgreSQL y bitácora de auditoría | A01, A09     | 9       |
-| Bucket privado y URLs firmadas de corta duración                                            | A05          | 10      |
-| Checklist ASVS L1, pentesting y re-test antes/después                                       | Todas        | 14 a 17 |
+| Control                                                                 | Riesgo OWASP | Phase      |
+| ----------------------------------------------------------------------- | ------------ | ---------- |
+| TOTP opcional como segundo factor                                       | A07          | 8          |
+| Rol de base de datos no dueño en producción, para que la RLS se aplique | A01          | Despliegue |
+| Purga de `shipment_audit_events` y `notifications` a los 365 días       | A09          | 14 a 17    |
+| Bucket privado y URLs firmadas de corta duración                        | A05          | 10         |
+| Checklist ASVS L1, pentesting y re-test antes/después                   | Todas        | 14 a 17    |
 
 ## Cómo verificarlo
 
@@ -148,5 +185,5 @@ curl -sI https://<dominio>/            # CSP con nonce, COOP, COEP, CORP, HSTS
 curl -si https://<dominio>/api/v1/health
 pnpm test                              # CSP, proxy, entorno, health check, auth y rate limit
 pnpm test:e2e                          # Chromium, WebKit y WebKit iPhone
-pnpm test:smoke                        # Autenticación y rastreo contra Docker
+pnpm test:smoke                        # Autenticación, rastreo y agenda (IDOR) contra Docker
 ```

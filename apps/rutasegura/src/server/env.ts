@@ -32,6 +32,8 @@ const envSchema = z
     REGISTER_RATE_LIMIT_WINDOW_SECONDS: positiveInt.default(3600),
     TRACKING_RATE_LIMIT_MAX: positiveInt.default(5),
     TRACKING_RATE_LIMIT_WINDOW_SECONDS: positiveInt.default(900),
+    SHIPMENTS_RATE_LIMIT_MAX: positiveInt.default(60),
+    SHIPMENTS_RATE_LIMIT_WINDOW_SECONDS: positiveInt.default(60),
 
     STORAGE_ENDPOINT: z.url().optional(),
     STORAGE_REGION: z.string().optional(),

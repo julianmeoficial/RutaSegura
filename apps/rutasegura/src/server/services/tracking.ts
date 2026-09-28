@@ -4,6 +4,7 @@ import type { TrackingRequest, TrackingResponse } from "@rutasegura/contracts";
 import { recordAuthEvent } from "@/server/audit/auth-events";
 import { safeEqual } from "@/server/auth/digest";
 import { getEnv } from "@/server/env";
+import { withRlsContext } from "@/server/repositories/db";
 import { findShipmentByTrackingNumber, listShipmentEvents } from "@/server/repositories/shipments";
 import type { RequestContext } from "./auth";
 
@@ -17,26 +18,26 @@ export async function trackShipment(
   ctx: RequestContext,
 ): Promise<TrackingResponse | null> {
   const { HMAC_SECRET } = getEnv();
-  const shipment = await findShipmentByTrackingNumber(input.trackingNumber);
   const provided = phoneLast4Digest(HMAC_SECRET, input.trackingNumber, input.phoneLast4);
-  const matches = safeEqual(provided, shipment?.recipientPhoneLast4Hmac ?? "");
+
+  const result = await withRlsContext({ mode: "public_tracking" }, async (tx) => {
+    const shipment = await findShipmentByTrackingNumber(tx, input.trackingNumber);
+    const matches = safeEqual(provided, shipment?.recipientPhoneLast4Hmac ?? "");
+    if (!shipment || !matches) return null;
+
+    const events = await listShipmentEvents(tx, shipment.id);
+    return {
+      trackingNumber: shipment.trackingNumber,
+      status: shipment.status,
+      events: events.map((event) => ({
+        status: event.status,
+        city: event.city,
+        occurredAt: event.occurredAt.toISOString(),
+      })),
+    };
+  });
 
   const audit = { subject: input.trackingNumber, ip: ctx.ip, userAgent: ctx.userAgent };
-
-  if (!shipment || !matches) {
-    await recordAuthEvent({ type: "tracking_failure", ...audit });
-    return null;
-  }
-
-  const events = await listShipmentEvents(shipment.id);
-  await recordAuthEvent({ type: "tracking_success", ...audit });
-  return {
-    trackingNumber: shipment.trackingNumber,
-    status: shipment.status,
-    events: events.map((event) => ({
-      status: event.status,
-      city: event.city,
-      occurredAt: event.occurredAt.toISOString(),
-    })),
-  };
+  await recordAuthEvent({ type: result ? "tracking_success" : "tracking_failure", ...audit });
+  return result;
 }

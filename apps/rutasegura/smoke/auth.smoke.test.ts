@@ -55,6 +55,33 @@ async function me(jar: Jar) {
   return fetch(`${BASE_URL}/api/v1/auth/me`, { headers: { cookie: cookieHeader(jar) } });
 }
 
+/**
+ * IP propia para los casos de envíos: así no consumen el cupo por IP que las
+ * pruebas de login y rastreo agotan a propósito.
+ */
+const SHIPMENTS_IP = { "x-forwarded-for": "198.51.100.19" };
+
+async function request(method: string, path: string, jar?: Jar, body?: unknown) {
+  return fetch(`${BASE_URL}${path}`, {
+    method,
+    headers: {
+      origin: ORIGIN,
+      ...SHIPMENTS_IP,
+      ...(body === undefined ? {} : { "content-type": "application/json" }),
+      ...(jar ? { cookie: cookieHeader(jar) } : {}),
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
+
+/** Fecha de Bogotá (UTC-5) dentro de `daysAhead` días que cae en el día `weekdays`. */
+function bogotaDate(daysAhead: number, weekdays: number[]): string {
+  const date = new Date(Date.now() - 5 * 3600_000);
+  date.setUTCDate(date.getUTCDate() + daysAhead);
+  while (!weekdays.includes(date.getUTCDay())) date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString().slice(0, 10);
+}
+
 describe("smoke de autenticación en Docker", () => {
   const session: Jar = new Map();
   let firstRefresh = "";
@@ -149,6 +176,167 @@ describe("smoke de autenticación en Docker", () => {
     const response = await post("/api/v1/auth/logout", undefined, fresh);
     expect(response.status).toBe(204);
     expect((await me(new Map([["rs_at", stolenAccess]]))).status).toBe(401);
+  });
+
+  // Agenda de entregas (Phase 9). Va antes de las pruebas de rastreo, que agotan
+  // el límite por guía de RS0000000001 que el reclamo comparte.
+  const aliceShipments: Jar = new Map();
+  const bobShipments: Jar = new Map();
+  let aliceShipmentId = "";
+
+  it("los endpoints de envíos exigen sesión", async () => {
+    const fakeId = "01J8Z3K4M5N6P7Q8R9S0T1V2W3";
+    const responses = await Promise.all([
+      request("GET", "/api/v1/shipments"),
+      request("GET", `/api/v1/shipments/${fakeId}`),
+      request("PATCH", `/api/v1/shipments/${fakeId}/schedule`, undefined, {
+        date: "2030-01-01",
+        slot: "08-10",
+      }),
+      request("POST", "/api/v1/shipments/claim", undefined, {
+        trackingNumber: "RS0000000001",
+        phoneLast4: "4321",
+      }),
+    ]);
+    for (const response of responses) {
+      expect(response.status).toBe(401);
+      expect((await response.json()).error.code).toBe("unauthorized");
+    }
+  });
+
+  it("Alice reclama RS0000000001 y el reclamo es idempotente", async () => {
+    for (const [user, jar] of [
+      [alice, aliceShipments],
+      [bob, bobShipments],
+    ] as const) {
+      const login = await post(
+        "/api/v1/auth/login",
+        { email: user.email, password: user.password },
+        jar,
+        SHIPMENTS_IP,
+      );
+      expect(login.status).toBe(200);
+    }
+
+    const claim = await request("POST", "/api/v1/shipments/claim", aliceShipments, {
+      trackingNumber: "RS0000000001",
+      phoneLast4: "4321",
+    });
+    expect(claim.status).toBe(200);
+    const shipment = await claim.json();
+    expect(shipment).toEqual({
+      id: expect.stringMatching(/^[0-7][0-9A-HJKMNP-TV-Z]{25}$/),
+      trackingNumber: "RS0000000001",
+      status: "in_transit",
+      window: null,
+    });
+    aliceShipmentId = shipment.id;
+
+    const again = await request("POST", "/api/v1/shipments/claim", aliceShipments, {
+      trackingNumber: "RS0000000001",
+      phoneLast4: "4321",
+    });
+    expect(again.status).toBe(200);
+    expect((await again.json()).id).toBe(aliceShipmentId);
+  });
+
+  it("Alice agenda y reprograma; las franjas inválidas se rechazan", async () => {
+    const path = `/api/v1/shipments/${aliceShipmentId}/schedule`;
+    const first = bogotaDate(2, [1, 2, 3, 4, 5]);
+    const later = bogotaDate(3, [1, 2, 3, 4, 5]);
+
+    const scheduled = await request("PATCH", path, aliceShipments, { date: first, slot: "08-10" });
+    expect(scheduled.status).toBe(200);
+    expect((await scheduled.json()).window).toEqual({ date: first, slot: "08-10" });
+
+    const rescheduled = await request("PATCH", path, aliceShipments, {
+      date: later,
+      slot: "14-16",
+    });
+    expect(rescheduled.status).toBe(200);
+
+    const weekend = await request("PATCH", path, aliceShipments, {
+      date: bogotaDate(1, [6]),
+      slot: "10-12",
+    });
+    expect(weekend.status).toBe(400);
+    expect((await weekend.json()).error.code).toBe("invalid_schedule");
+
+    const past = await request("PATCH", path, aliceShipments, {
+      date: bogotaDate(-7, [1, 2, 3, 4, 5]),
+      slot: "10-12",
+    });
+    expect((await past.json()).error.code).toBe("invalid_schedule");
+
+    const withOwner = await request("PATCH", path, aliceShipments, {
+      date: later,
+      slot: "08-10",
+      ownerId: "cualquiera",
+    });
+    expect(withOwner.status).toBe(400);
+    expect((await withOwner.json()).error.code).toBe("bad_request");
+  });
+
+  it("el detalle de Alice trae la bitácora, sin datos del destinatario", async () => {
+    const response = await request("GET", `/api/v1/shipments/${aliceShipmentId}`, aliceShipments);
+    expect(response.status).toBe(200);
+    const detail = await response.json();
+    expect(detail.window.slot).toBe("14-16");
+    expect(detail.audit.map((event: { type: string }) => event.type)).toEqual([
+      "claimed",
+      "scheduled",
+      "rescheduled",
+    ]);
+    expect(JSON.stringify(detail)).not.toMatch(/recipient|Destinatario|4321|ownerId/);
+  });
+
+  it("Bob recibe 404 sobre el envío de Alice, igual que con un ULID inexistente", async () => {
+    const unknownId = "01J8Z3K4M5N6P7Q8R9S0T1V2W3";
+
+    const read = await request("GET", `/api/v1/shipments/${aliceShipmentId}`, bobShipments);
+    const readUnknown = await request("GET", `/api/v1/shipments/${unknownId}`, bobShipments);
+    expect(read.status).toBe(404);
+    expect(readUnknown.status).toBe(404);
+    expect(await read.json()).toEqual(await readUnknown.json());
+
+    const body = { date: bogotaDate(4, [1, 2, 3, 4, 5]), slot: "16-18" };
+    const write = await request(
+      "PATCH",
+      `/api/v1/shipments/${aliceShipmentId}/schedule`,
+      bobShipments,
+      body,
+    );
+    const writeUnknown = await request(
+      "PATCH",
+      `/api/v1/shipments/${unknownId}/schedule`,
+      bobShipments,
+      body,
+    );
+    expect(write.status).toBe(404);
+    expect(writeUnknown.status).toBe(404);
+    expect(await write.json()).toEqual(await writeUnknown.json());
+
+    const steal = await request("POST", "/api/v1/shipments/claim", bobShipments, {
+      trackingNumber: "RS0000000001",
+      phoneLast4: "4321",
+    });
+    expect(steal.status).toBe(404);
+
+    const bobList = await request("GET", "/api/v1/shipments", bobShipments);
+    expect((await bobList.json()).shipments).toEqual([]);
+
+    const unchanged = await request("GET", `/api/v1/shipments/${aliceShipmentId}`, aliceShipments);
+    expect((await unchanged.json()).window.slot).toBe("14-16");
+  });
+
+  it("la lista de Alice solo incluye sus envíos reclamados", async () => {
+    const response = await request("GET", "/api/v1/shipments", aliceShipments);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("ratelimit-limit")).not.toBeNull();
+    const { shipments } = await response.json();
+    expect(shipments.map((s: { trackingNumber: string }) => s.trackingNumber)).toEqual([
+      "RS0000000001",
+    ]);
   });
 
   it("bloquea la cuenta tras 5 fallos con una respuesta idéntica", async () => {

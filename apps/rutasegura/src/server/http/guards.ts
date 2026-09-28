@@ -1,5 +1,6 @@
 import "server-only";
 import { recordAuthEvent, type AuthEventInput } from "@/server/audit/auth-events";
+import { OwnershipError } from "@/server/authorization/ownership";
 import { errorKind, logger } from "@/server/logger";
 import { rateLimitHeaders, type RateLimitRule } from "@/server/rate-limit/limiter";
 import { applyRateLimit } from "@/server/rate-limit/policies";
@@ -31,15 +32,19 @@ export async function guardRateLimit(
   return { headers };
 }
 
-/** Convierte cualquier excepción no prevista en un 500 genérico y registrado. */
-export function withErrorHandling(
+/**
+ * Convierte cualquier excepción no prevista en un 500 genérico y registrado.
+ * Un `OwnershipError` que llegue hasta aquí responde `404 not_found`.
+ */
+export function withErrorHandling<C = unknown>(
   route: string,
-  handler: (request: Request) => Promise<Response>,
-): (request: Request) => Promise<Response> {
-  return async (request) => {
+  handler: (request: Request, context: C) => Promise<Response>,
+): (request: Request, context: C) => Promise<Response> {
+  return async (request, context) => {
     try {
-      return await handler(request);
+      return await handler(request, context);
     } catch (error) {
+      if (error instanceof OwnershipError) return apiError("not_found");
       logger.error("api.unhandled_error", { route, kind: errorKind(error) });
       return apiError("internal_error");
     }

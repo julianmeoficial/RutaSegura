@@ -1,9 +1,11 @@
 import { sql } from "drizzle-orm";
 import {
   check,
+  date,
   index,
   integer,
   pgEnum,
+  pgPolicy,
   pgTable,
   text,
   timestamp,
@@ -104,18 +106,67 @@ export const shipmentStatus = pgEnum("shipment_status", [
   "exception",
 ]);
 
+/**
+ * Contexto de RLS que el servidor fija por transacción con `set_config(..., true)`.
+ * `app.mode` habilita los accesos que no dependen del dueño: rastreo público,
+ * reclamo de una guía libre y cambios de estado del operador.
+ */
+const appUserId = sql`nullif(current_setting('app.user_id', true), '')::uuid`;
+const appMode = sql`current_setting('app.mode', true)`;
+
 export const shipments = pgTable(
   "shipments",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    /** ULID expuesto por la API autenticada; se asigna al reclamar la guía. */
+    publicId: text("public_id"),
     trackingNumber: text("tracking_number").notNull(),
     recipientName: text("recipient_name").notNull(),
     recipientPhoneLast4Hmac: text("recipient_phone_last4_hmac").notNull(),
     status: shipmentStatus("status").notNull().default("created"),
+    /** `null` mientras nadie haya reclamado la guía. */
+    ownerId: uuid("owner_id").references(() => users.id, { onDelete: "set null" }),
+    windowDate: date("window_date"),
+    windowSlot: text("window_slot"),
     createdAt,
   },
-  (table) => [uniqueIndex("shipments_tracking_number_unique").on(table.trackingNumber)],
+  (table) => [
+    uniqueIndex("shipments_tracking_number_unique").on(table.trackingNumber),
+    uniqueIndex("shipments_public_id_unique").on(table.publicId),
+    index("shipments_owner_idx").on(table.ownerId, table.createdAt),
+    check(
+      "shipments_window_slot_valid",
+      sql`${table.windowSlot} is null or ${table.windowSlot} in ('08-10', '10-12', '12-14', '14-16', '16-18')`,
+    ),
+    check(
+      "shipments_window_complete",
+      sql`(${table.windowDate} is null) = (${table.windowSlot} is null)`,
+    ),
+    pgPolicy("shipments_select", {
+      for: "select",
+      using: sql`owner_id = ${appUserId} or ${appMode} in ('public_tracking', 'claim', 'operator')`,
+    }),
+    pgPolicy("shipments_update_owner", {
+      for: "update",
+      using: sql`owner_id = ${appUserId}`,
+      withCheck: sql`owner_id = ${appUserId}`,
+    }),
+    pgPolicy("shipments_update_claim", {
+      for: "update",
+      using: sql`${appMode} = 'claim' and owner_id is null`,
+      withCheck: sql`owner_id = ${appUserId}`,
+    }),
+    pgPolicy("shipments_update_operator", {
+      for: "update",
+      using: sql`${appMode} = 'operator'`,
+      withCheck: sql`${appMode} = 'operator'`,
+    }),
+  ],
 );
+
+/** Visible solo si el envío lo es: la subconsulta aplica la RLS de `shipments`. */
+const shipmentVisible = (column: string) =>
+  sql.raw(`exists (select 1 from shipments s where s.id = ${column})`);
 
 export const shipmentEvents = pgTable(
   "shipment_events",
@@ -128,5 +179,84 @@ export const shipmentEvents = pgTable(
     city: text("city").notNull(),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
   },
-  (table) => [index("shipment_events_shipment_idx").on(table.shipmentId, table.occurredAt)],
+  (table) => [
+    index("shipment_events_shipment_idx").on(table.shipmentId, table.occurredAt),
+    pgPolicy("shipment_events_select", {
+      for: "select",
+      using: shipmentVisible("shipment_events.shipment_id"),
+    }),
+    pgPolicy("shipment_events_insert_operator", {
+      for: "insert",
+      withCheck: sql`${appMode} = 'operator'`,
+    }),
+  ],
+);
+
+export const shipmentAuditEventType = pgEnum("shipment_audit_event_type", [
+  "claimed",
+  "scheduled",
+  "rescheduled",
+  "status_changed",
+]);
+
+/**
+ * Bitácora de envíos. Sin IP, correo, guía ni nombre: solo quién (id interno),
+ * qué y cuándo. Retención prevista de 365 días.
+ */
+export const shipmentAuditEvents = pgTable(
+  "shipment_audit_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shipmentId: uuid("shipment_id")
+      .notNull()
+      .references(() => shipments.id, { onDelete: "cascade" }),
+    actorUserId: uuid("actor_user_id").references(() => users.id, { onDelete: "set null" }),
+    type: shipmentAuditEventType("type").notNull(),
+    fromStatus: shipmentStatus("from_status"),
+    toStatus: shipmentStatus("to_status"),
+    createdAt,
+  },
+  (table) => [
+    index("shipment_audit_events_shipment_idx").on(table.shipmentId, table.createdAt),
+    index("shipment_audit_events_actor_idx").on(table.actorUserId, table.createdAt),
+    pgPolicy("shipment_audit_events_select", {
+      for: "select",
+      using: sql`actor_user_id = ${appUserId} or ${shipmentVisible("shipment_audit_events.shipment_id")}`,
+    }),
+    pgPolicy("shipment_audit_events_insert", {
+      for: "insert",
+      withCheck: shipmentVisible("shipment_audit_events.shipment_id"),
+    }),
+  ],
+);
+
+export const notificationKind = pgEnum("notification_kind", [
+  "shipment_scheduled",
+  "shipment_rescheduled",
+  "shipment_status_changed",
+]);
+
+/** Avisos simulados. El cuerpo es una plantilla fija, sin datos del envío. */
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    kind: notificationKind("kind").notNull(),
+    body: text("body").notNull(),
+    createdAt,
+  },
+  (table) => [
+    index("notifications_user_idx").on(table.userId, table.createdAt),
+    pgPolicy("notifications_select", {
+      for: "select",
+      using: sql`user_id = ${appUserId}`,
+    }),
+    pgPolicy("notifications_insert", {
+      for: "insert",
+      withCheck: sql`user_id = ${appUserId} or ${appMode} = 'operator'`,
+    }),
+  ],
 );

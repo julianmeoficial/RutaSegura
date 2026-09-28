@@ -6,7 +6,7 @@ RutaSegura se diseña para no repetir las debilidades del [análisis observacion
 
 ## Hallazgos del sitio de referencia y controles de RutaSegura
 
-| Hallazgo | Qué se observó                                             | Control en RutaSegura                                                                                             | Dónde vive                            |
+| Hallazgo | ¿Qué se observó?                                           | Control en RutaSegura                                                                                             | ¿Dónde vive?                          |
 | -------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
 | H-00     | Vista de rastreo en negro en Chromium, funcional en WebKit | Render en servidor, cero terceros, verificación en Chromium, WebKit y WebKit iPhone en cada PR                    | `layout.tsx`, `e2e/smoke.spec.ts`, CI |
 | H-01     | Ambiente de pruebas público e indexable                    | `X-Robots-Tag: noindex, nofollow` en todo entorno distinto de producción                                          | `proxy.ts`                            |
@@ -43,7 +43,7 @@ Desde el Sprint 1, RutaSegura cubre OWASP A07 y A01 con estos controles; el deta
 
 Desde la Phase 9 la API de envíos ([api.md](api.md#envíos-y-agenda)) cubre OWASP A01 (IDOR) y A09 con estas capas:
 
-| Capa               | Control                                                                                                                                    | Dónde vive                                  |
+| Capa               | Control                                                                                                                                    | ¿Dónde vive?                                |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
 | Identidad          | El dueño sale de `authenticate()`; los contratos `.strict()` rechazan `ownerId` y `userId`                                                 | `require-user.ts`, `contracts/shipments.ts` |
 | Autorización       | `assertOwnership({ ownerId }, userId)` por igualdad exacta en cada lectura y escritura; `ownerId` nulo no es de nadie                      | `server/authorization/ownership.ts`         |
@@ -60,7 +60,7 @@ Desde la Phase 9 la API de envíos ([api.md](api.md#envíos-y-agenda)) cubre OWA
 
 Cada petición abre una transacción y fija `app.user_id` y, cuando aplica, `app.mode` con `set_config(..., true)` (equivalente a `SET LOCAL`): el valor muere con la transacción y no pasa a otra petición que reutilice la conexión del pool.
 
-| `app.mode`        | Quién lo usa                | Qué permite                                                                 |
+| `app.mode`        | ¿Quién lo usa?              | ¿Qué permite?                                                               |
 | ----------------- | --------------------------- | --------------------------------------------------------------------------- |
 | _(vacío)_         | Listar, consultar y agendar | Solo filas con `owner_id = app.user_id`                                     |
 | `public_tracking` | `services/tracking.ts`      | `SELECT` de envíos y eventos; el filtro por guía y dígitos lo hace la app   |
@@ -123,7 +123,7 @@ manifest-src 'self';
 upgrade-insecure-requests
 ```
 
-| Directiva                                   | Por qué                                                                                                                               |
+| Directiva                                   | ¿Por qué?                                                                                                                             |
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `script-src` con nonce y `'strict-dynamic'` | Solo corren los scripts que Next firma con el nonce de esa petición. Un script inyectado no conoce el nonce y el navegador lo bloquea |
 | `style-src` con nonce                       | Sin estilos en línea arbitrarios. Los estilos van en hojas CSS propias                                                                |

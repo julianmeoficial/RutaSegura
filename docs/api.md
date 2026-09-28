@@ -125,11 +125,11 @@ Consulta pública de una guía con doble dato:
 ```json
 {
   "trackingNumber": "RS0000000001",
-  "status": "out_for_delivery",
+  "status": "in_transit",
   "events": [
     { "status": "created", "city": "Bogotá", "occurredAt": "2026-09-20T13:00:00.000Z" },
     { "status": "in_transit", "city": "Bogotá", "occurredAt": "2026-09-21T09:30:00.000Z" },
-    { "status": "out_for_delivery", "city": "Medellín", "occurredAt": "2026-09-22T07:15:00.000Z" }
+    { "status": "in_transit", "city": "Medellín", "occurredAt": "2026-09-22T07:15:00.000Z" }
   ]
 }
 ```
@@ -140,7 +140,121 @@ Consulta pública de una guía con doble dato:
 | `404`     | `tracking_not_found`: guía inexistente o dígitos incorrectos, sin distinción |
 | `429`     | Más de 5 consultas por IP o por guía en 15 min                               |
 
-La semilla de desarrollo crea `RS0000000001` (dígitos `4321`) y `RS0000000002` (dígitos `9876`), con datos ficticios.
+La semilla de desarrollo crea `RS0000000001` (dígitos `4321`, en tránsito) y `RS0000000002` (dígitos `9876`, entregada), con datos ficticios y sin dueño.
+
+### Envíos y agenda
+
+Endpoints autenticados de la Phase 9. El usuario **reclama** una guía existente con el mismo doble dato del rastreo y después agenda o reprograma su franja de entrega; el cliente no crea envíos. El diseño de autorización está en [seguridad.md](seguridad.md#autorización-por-objeto).
+
+- El dueño sale siempre de la sesión (`authenticate()`), nunca del cuerpo ni de la URL. Los contratos son `.strict()`: un `ownerId` o `userId` en el cuerpo da `400 bad_request`.
+- Los envíos se identifican con un **ULID** (`public_id`, 26 caracteres Crockford), no con el UUID interno.
+- Sin sesión: `401 unauthorized`. Envío ajeno, inexistente o con un identificador mal formado: `404 not_found`, con el mismo cuerpo en los tres casos. Nunca `403`, para no confirmar que el recurso existe.
+- Las respuestas nunca incluyen nombre ni teléfono del destinatario.
+
+| Método  | Ruta                              | Efecto                             |
+| ------- | --------------------------------- | ---------------------------------- |
+| `POST`  | `/api/v1/shipments/claim`         | Vincula una guía a la cuenta       |
+| `GET`   | `/api/v1/shipments`               | Lista solo los envíos del usuario  |
+| `GET`   | `/api/v1/shipments/{id}`          | Detalle y bitácora si es el dueño  |
+| `PATCH` | `/api/v1/shipments/{id}/schedule` | Crea o cambia la franja de entrega |
+
+No existe endpoint para que el cliente cambie el estado logístico: eso es una operación de operador (`transitionShipmentStatus` en el servidor).
+
+#### `POST /api/v1/shipments/claim`
+
+```json
+{ "trackingNumber": "RS0000000001", "phoneLast4": "4321" }
+```
+
+`200` con el envío:
+
+```json
+{
+  "id": "01K66Z8Q3W0V2R8E1XJ5N7C4TB",
+  "trackingNumber": "RS0000000001",
+  "status": "in_transit",
+  "window": null
+}
+```
+
+| Respuesta | Cuándo                                                                                   |
+| --------- | ---------------------------------------------------------------------------------------- |
+| `200`     | Guía libre (queda a nombre del usuario) o ya reclamada por él: el reclamo es idempotente |
+| `400`     | Mismo formato que el rastreo                                                             |
+| `401`     | Sin sesión                                                                               |
+| `404`     | `not_found`: guía inexistente, dígitos incorrectos o guía ya reclamada por otro usuario  |
+| `429`     | Comparte límites con el rastreo: 5 intentos por IP o por guía en 15 min                  |
+
+El reclamo cuesta lo mismo que el rastreo (siempre se calcula el HMAC) y cada fallo queda como `tracking_failure` en `auth_events`, porque es otra forma de probar dígitos contra una guía.
+
+#### `GET /api/v1/shipments`
+
+`200 {"shipments": [ … ]}` con los envíos del usuario, del más reciente al más antiguo. Las guías sin reclamar nunca aparecen.
+
+#### `GET /api/v1/shipments/{id}`
+
+`200` con el envío y su bitácora:
+
+```json
+{
+  "id": "01K66Z8Q3W0V2R8E1XJ5N7C4TB",
+  "trackingNumber": "RS0000000001",
+  "status": "in_transit",
+  "window": { "date": "2026-10-01", "slot": "14-16" },
+  "audit": [
+    {
+      "type": "claimed",
+      "fromStatus": null,
+      "toStatus": null,
+      "createdAt": "2026-09-28T02:10:54.000Z"
+    },
+    {
+      "type": "scheduled",
+      "fromStatus": null,
+      "toStatus": null,
+      "createdAt": "2026-09-28T02:10:55.000Z"
+    }
+  ]
+}
+```
+
+#### `PATCH /api/v1/shipments/{id}/schedule`
+
+```json
+{ "date": "2026-10-01", "slot": "14-16" }
+```
+
+`date` es una fecha de calendario en `America/Bogota` y `slot`, una de las cinco franjas de 2 h: `08-10`, `10-12`, `12-14`, `14-16` o `16-18`. El cliente no envía instantes arbitrarios. `200` con el envío actualizado; si la franja no cambia, responde igual sin escribir nada.
+
+| Respuesta | Cuándo                                                                                                              |
+| --------- | ------------------------------------------------------------------------------------------------------------------- |
+| `400`     | `bad_request`: cuerpo mal formado, franja fuera de la lista o campos adicionales                                    |
+| `400`     | `invalid_schedule`: sábado o domingo, franja que ya empezó o envío `out_for_delivery` o `delivered`, sin distinción |
+| `401`     | Sin sesión                                                                                                          |
+| `404`     | `not_found`: envío ajeno o inexistente                                                                              |
+| `429`     | Más de 60 peticiones del usuario por minuto (compartido con listar y consultar)                                     |
+
+Cada agenda o reprogramación deja un evento `scheduled` o `rescheduled` en la bitácora y un aviso simulado con cuerpo genérico.
+
+#### Prueba de autorización negativa
+
+El smoke en Docker ([`auth.smoke.test.ts`](../apps/rutasegura/smoke/auth.smoke.test.ts)) la ejecuta en cada PR. A mano:
+
+```bash
+# Alice reclama y agenda; guarda el ULID que devuelve el reclamo.
+curl -s -b alice.txt -H 'content-type: application/json' \
+  -d '{"trackingNumber":"RS0000000001","phoneLast4":"4321"}' \
+  http://localhost:3000/api/v1/shipments/claim
+
+# Bob, con su propia sesión, sobre el ULID de Alice: 404, igual que un ULID inexistente.
+curl -si -b bob.txt http://localhost:3000/api/v1/shipments/<ULID-de-Alice>
+curl -si -b bob.txt -X PATCH -H 'content-type: application/json' \
+  -d '{"date":"2026-10-01","slot":"08-10"}' \
+  http://localhost:3000/api/v1/shipments/<ULID-de-Alice>/schedule
+
+# Sin cookie: 401.
+curl -si http://localhost:3000/api/v1/shipments
+```
 
 ### Rutas inexistentes
 
@@ -164,6 +278,7 @@ Definidos en [`packages/contracts/src/errors.ts`](../packages/contracts/src/erro
 | `forbidden`           | 403  | No tienes acceso a este recurso.                                           |
 | `not_found`           | 404  | El recurso solicitado no existe.                                           |
 | `tracking_not_found`  | 404  | No encontramos un envío con ese número de guía y esos datos.               |
+| `invalid_schedule`    | 400  | La franja elegida no está disponible para este envío.                      |
 | `rate_limited`        | 429  | Demasiados intentos. Vuelve a intentarlo más tarde.                        |
 | `internal_error`      | 500  | Ocurrió un error inesperado.                                               |
 | `service_unavailable` | 503  | El servicio no está disponible en este momento.                            |
@@ -174,10 +289,9 @@ El mensaje depende solo del código, nunca de la causa interna. Esto es delibera
 
 Las carpetas existen, pero todavía no tienen handler: hoy responden con el 404 genérico.
 
-| Ruta                | Propósito                   | Phase | Control principal                                                     |
-| ------------------- | --------------------------- | ----- | --------------------------------------------------------------------- |
-| `/api/v1/auth/totp` | Segundo factor opcional     | 8     | TOTP con secreto cifrado y códigos de recuperación                    |
-| `/api/v1/shipments` | Envíos y agenda del usuario | 9     | `assertOwnership` por objeto, identificadores ULID, RLS en PostgreSQL |
-| `/api/v1/documents` | Descarga de soportes        | 10    | Bucket privado y URL firmada de 60 s                                  |
+| Ruta                | Propósito               | Phase | Control principal                                  |
+| ------------------- | ----------------------- | ----- | -------------------------------------------------- |
+| `/api/v1/auth/totp` | Segundo factor opcional | 8     | TOTP con secreto cifrado y códigos de recuperación |
+| `/api/v1/documents` | Descarga de soportes    | 10    | Bucket privado y URL firmada de 60 s               |
 
 Cuando se implementen, cada una se documenta aquí con su contrato, sus errores y su prueba de autorización negativa.

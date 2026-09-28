@@ -59,9 +59,9 @@ El esquema vive en [`packages/database/src/schema.ts`](../packages/database/src/
 pnpm test:smoke
 ```
 
-[`scripts/smoke-auth.sh`](../scripts/smoke-auth.sh) levanta Compose con `--wait` (reconstruye si hace falta), borra los contadores `rl:*` de Redis de ejecuciones anteriores y corre [`smoke/auth.smoke.test.ts`](../apps/rutasegura/smoke/auth.smoke.test.ts) contra `http://localhost:$APP_HOST_PORT`. Al final imprime el conteo de `auth_events` por tipo como evidencia de la bitácora.
+[`scripts/smoke-auth.sh`](../scripts/smoke-auth.sh) levanta Compose con `--wait` (reconstruye si hace falta), borra los contadores `rl:*` de Redis de ejecuciones anteriores, borra y vuelve a sembrar las dos guías ficticias (para que queden sin dueño ni franja) y corre [`smoke/auth.smoke.test.ts`](../apps/rutasegura/smoke/auth.smoke.test.ts) contra `http://localhost:$APP_HOST_PORT`. Al final imprime el conteo de `auth_events`, de `shipment_audit_events` y de avisos simulados como evidencia de la bitácora.
 
-Los 12 casos cubren: health; registro con contraseña débil, válida y duplicada; login con cookies `HttpOnly` y `SameSite=Lax`; ruta protegida con JWT válido, ausente y alterado; rotación y reutilización del refresh token; logout inmediato; bloqueo tras 5 fallos con respuesta idéntica; 403 desde otro origen; 429 por IP y por correo con `X-Forwarded-For` falsificado; y rastreo de doble dato con 200, 404 uniforme y 429. CI los corre en el job `Smoke auth en Docker`.
+Los 18 casos cubren: health; registro con contraseña débil, válida y duplicada; login con cookies `HttpOnly` y `SameSite=Lax`; ruta protegida con JWT válido, ausente y alterado; rotación y reutilización del refresh token; logout inmediato; envíos sin sesión (401); reclamo idempotente de `RS0000000001`; agenda, reprogramación y franjas inválidas; detalle con bitácora y sin datos del destinatario; Bob sobre el ULID de Alice (404 en `GET` y `PATCH`, idéntico a un ULID inexistente); lista de Alice sin la guía no reclamada; bloqueo tras 5 fallos con respuesta idéntica; 403 desde otro origen; 429 por IP y por correo con `X-Forwarded-For` falsificado; y rastreo de doble dato con 200, 404 uniforme y 429. CI los corre en el job `Smoke auth en Docker`.
 
 ## Scripts
 

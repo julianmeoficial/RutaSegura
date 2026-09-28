@@ -20,7 +20,7 @@ const SEED_SHIPMENTS: SeedShipment[] = [
     events: [
       { status: "created", city: "Bogotá", at: "2026-09-20T13:00:00Z" },
       { status: "in_transit", city: "Bogotá", at: "2026-09-21T09:30:00Z" },
-      { status: "out_for_delivery", city: "Medellín", at: "2026-09-22T07:15:00Z" },
+      { status: "in_transit", city: "Medellín", at: "2026-09-22T07:15:00Z" },
     ],
   },
   {

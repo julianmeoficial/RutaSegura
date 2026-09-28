@@ -40,6 +40,18 @@ export function trackingRules(ip: string, trackingNumber: string): RateLimitRule
   ];
 }
 
+/** Listar, consultar y agendar envíos: límite por usuario, con su id como HMAC. */
+export function shipmentsRules(userId: string): RateLimitRule[] {
+  const env = getEnv();
+  return [
+    {
+      key: ruleKey("shipments", "user", userId),
+      limit: env.SHIPMENTS_RATE_LIMIT_MAX,
+      windowSeconds: env.SHIPMENTS_RATE_LIMIT_WINDOW_SECONDS,
+    },
+  ];
+}
+
 /**
  * Aplica las reglas en Redis. Si Redis no responde, lanza: los endpoints de
  * autenticación fallan cerrados (503) en lugar de quedar sin límite.

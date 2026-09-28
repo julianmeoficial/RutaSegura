@@ -13,6 +13,7 @@ export const apiErrorCodeSchema = z.enum([
   "forbidden",
   "not_found",
   "tracking_not_found",
+  "invalid_schedule",
   "rate_limited",
   "internal_error",
   "service_unavailable",
@@ -41,6 +42,10 @@ export const API_ERRORS = {
   tracking_not_found: {
     status: 404,
     message: "No encontramos un envío con ese número de guía y esos datos.",
+  },
+  invalid_schedule: {
+    status: 400,
+    message: "La franja elegida no está disponible para este envío.",
   },
   rate_limited: {
     status: 429,

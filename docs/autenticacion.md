@@ -61,7 +61,7 @@ El login emite dos cookies:
 | `rs_rt` (`__Host-rs_rt`) | Refresh token opaco; la base guarda su HMAC | 8 h    |
 
 - Las rutas protegidas llaman a `authenticate()` ([`require-user.ts`](../apps/rutasegura/src/server/auth/require-user.ts)): valida firma, algoritmo (`HS256` fijo, rechaza `alg: none`), emisor, audiencia y vencimiento, y además comprueba que la sesión `sid` siga vigente. Así el logout invalida el JWT al instante, sin esperar a que venza.
-- `GET /api/v1/auth/me` es la ruta protegida de referencia; las de envíos (Phase 9) usarán el mismo `authenticate()`.
+- `GET /api/v1/auth/me` es la ruta protegida de referencia; las de envíos (`/api/v1/shipments`, Phase 9) usan el mismo `authenticate()` y además `assertOwnership` por objeto ([seguridad.md](seguridad.md#autorización-por-objeto)).
 - Los nombres llevan el prefijo `__Host-` y el atributo `Secure` solo cuando la petición llega por HTTPS: Safari descarta las cookies `Secure` en `http://localhost`. Ver [compatibilidad-navegadores.md](compatibilidad-navegadores.md#cookies-de-sesión-en-webkit).
 
 ### Rotación del refresh token
@@ -87,13 +87,15 @@ La rotación revoca la fila vieja con `UPDATE ... WHERE revoked_at IS NULL` dent
 
 Implementado en [`server/rate-limit`](../apps/rutasegura/src/server/rate-limit) con un script Lua (`INCR` y `PEXPIRE` atómicos) sobre Redis. Las claves son `rl:<alcance>:<dimensión>:<HMAC>`: nunca contienen la IP, el correo ni la guía en claro.
 
-| Endpoint                     | Dimensión | Límite por defecto | Ventana | Variable                                                        |
-| ---------------------------- | --------- | ------------------ | ------- | --------------------------------------------------------------- |
-| `POST /api/v1/auth/login`    | IP        | 10                 | 15 min  | `LOGIN_RATE_LIMIT_IP_MAX`, `LOGIN_RATE_LIMIT_WINDOW_SECONDS`    |
-| `POST /api/v1/auth/login`    | Correo    | 10                 | 15 min  | `LOGIN_RATE_LIMIT_EMAIL_MAX`                                    |
-| `POST /api/v1/auth/register` | IP        | 5                  | 1 h     | `REGISTER_RATE_LIMIT_MAX`, `REGISTER_RATE_LIMIT_WINDOW_SECONDS` |
-| `POST /api/v1/tracking`      | IP        | 5                  | 15 min  | `TRACKING_RATE_LIMIT_MAX`, `TRACKING_RATE_LIMIT_WINDOW_SECONDS` |
-| `POST /api/v1/tracking`      | Guía      | 5                  | 15 min  | Las mismas                                                      |
+| Endpoint                           | Dimensión | Límite por defecto | Ventana | Variable                                                          |
+| ---------------------------------- | --------- | ------------------ | ------- | ----------------------------------------------------------------- |
+| `POST /api/v1/auth/login`          | IP        | 10                 | 15 min  | `LOGIN_RATE_LIMIT_IP_MAX`, `LOGIN_RATE_LIMIT_WINDOW_SECONDS`      |
+| `POST /api/v1/auth/login`          | Correo    | 10                 | 15 min  | `LOGIN_RATE_LIMIT_EMAIL_MAX`                                      |
+| `POST /api/v1/auth/register`       | IP        | 5                  | 1 h     | `REGISTER_RATE_LIMIT_MAX`, `REGISTER_RATE_LIMIT_WINDOW_SECONDS`   |
+| `POST /api/v1/tracking`            | IP        | 5                  | 15 min  | `TRACKING_RATE_LIMIT_MAX`, `TRACKING_RATE_LIMIT_WINDOW_SECONDS`   |
+| `POST /api/v1/tracking`            | Guía      | 5                  | 15 min  | Las mismas                                                        |
+| `POST /api/v1/shipments/claim`     | IP y guía | 5                  | 15 min  | Las del rastreo, con los mismos contadores                        |
+| `GET` y `PATCH /api/v1/shipments…` | Usuario   | 60                 | 1 min   | `SHIPMENTS_RATE_LIMIT_MAX`, `SHIPMENTS_RATE_LIMIT_WINDOW_SECONDS` |
 
 - Toda respuesta de estos endpoints lleva `RateLimit-Limit`, `RateLimit-Remaining` y `RateLimit-Reset`. Al excederse: `429 rate_limited` con `Retry-After` en segundos, y un evento `rate_limited` en la bitácora.
 - Si Redis no responde, el endpoint devuelve `503`: falla cerrado en lugar de quedar sin límite.
@@ -135,16 +137,16 @@ La tabla `auth_events` registra cada evento sin datos personales en claro: el co
 | `refresh`, `refresh_reuse`               | Rotación normal; reutilización de un token ya rotado    |
 | `logout`                                 | Cierre de sesión                                        |
 | `rate_limited`                           | Cualquier 429 de los endpoints de auth o rastreo        |
-| `tracking_success`, `tracking_failure`   | Consulta de guía correcta o fallida                     |
+| `tracking_success`, `tracking_failure`   | Consulta de guía correcta o fallida; reclamo fallido    |
 
-Un fallo al escribir la bitácora se registra en el log, pero no tumba el login del usuario. La bitácora completa con consulta por usuario y retención llega con la Phase 9.
+Un fallo al escribir la bitácora se registra en el log, pero no tumba el login del usuario. Los cambios sobre envíos (reclamo, agenda, reprogramación y cambio de estado) van a `shipment_audit_events`, indexada por envío y por actor para consultarla por usuario, con retención de 365 días ([seguridad.md](seguridad.md#autorización-por-objeto)).
 
 ## Pruebas
 
 - **Unitarias** (`pnpm test`): hash Argon2id y parámetros; JWT válido, vencido, `alg: none`, otra audiencia, otro emisor, otra clave y rol alterado; duración del bloqueo; limitador; nombres y atributos de cookie; HMAC del rastreo; lectura de IP y límite del cuerpo; rechazo de CSRF en `proxy.ts`; contratos.
-- **Smoke en Docker** (`pnpm test:smoke`): 12 casos contra la app real con PostgreSQL y Redis. Ver [desarrollo.md](desarrollo.md#pruebas-smoke-en-docker).
+- **Smoke en Docker** (`pnpm test:smoke`): 18 casos contra la app real con PostgreSQL y Redis, incluida la prueba negativa de IDOR sobre envíos. Ver [desarrollo.md](desarrollo.md#pruebas-smoke-en-docker).
 
 ## Pendiente
 
 - 2FA TOTP opcional.
-- `assertOwnership` por objeto, RLS y bitácora completa (Phase 9).
+- Rol de base de datos no dueño en producción para que la RLS se aplique, y purga de la bitácora a los 365 días.

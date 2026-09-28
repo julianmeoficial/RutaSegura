@@ -8,6 +8,13 @@
       "when": 1790546217277,
       "tag": "0000_init_auth_tracking",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790561281581,
+      "tag": "0001_shipments_agenda",
+      "breakpoints": true
     }
   ]
 }

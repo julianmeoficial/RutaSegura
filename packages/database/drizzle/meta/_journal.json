@@ -15,6 +15,13 @@
       "when": 1790561281581,
       "tag": "0001_shipments_agenda",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790563593666,
+      "tag": "0002_notifications_read",
+      "breakpoints": true
     }
   ]
 }

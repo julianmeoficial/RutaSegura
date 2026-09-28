@@ -339,6 +339,51 @@ describe("smoke de autenticación en Docker", () => {
     ]);
   });
 
+  it("los avisos exigen sesión", async () => {
+    const list = await request("GET", "/api/v1/notifications");
+    const read = await request("POST", "/api/v1/notifications/read");
+    expect(list.status).toBe(401);
+    expect(read.status).toBe(401);
+  });
+
+  it("Alice ve sus avisos genéricos y Bob no ve ni marca los de Alice", async () => {
+    const aliceList = await request("GET", "/api/v1/notifications", aliceShipments);
+    expect(aliceList.status).toBe(200);
+    expect(aliceList.headers.get("ratelimit-limit")).not.toBeNull();
+    const alice = await aliceList.json();
+    expect(alice.unreadCount).toBe(2);
+    expect(alice.notifications.map((n: { kind: string }) => n.kind)).toEqual([
+      "shipment_rescheduled",
+      "shipment_scheduled",
+    ]);
+    expect(JSON.stringify(alice)).not.toMatch(
+      /RS\d{10}|[0-7][0-9A-HJKMNP-TV-Z]{25}|Destinatario|4321|userId|\d{2}-\d{2}"/,
+    );
+
+    const bobList = await request("GET", "/api/v1/notifications", bobShipments);
+    expect(await bobList.json()).toEqual({ notifications: [], unreadCount: 0 });
+
+    const bobRead = await request("POST", "/api/v1/notifications/read", bobShipments);
+    expect(bobRead.status).toBe(200);
+    const stillUnread = await request("GET", "/api/v1/notifications", aliceShipments);
+    expect((await stillUnread.json()).unreadCount).toBe(2);
+
+    const forged = await request("GET", `/api/v1/notifications?userId=${"x"}`, bobShipments);
+    expect(forged.status).toBe(400);
+  });
+
+  it("Alice marca sus avisos como leídos", async () => {
+    const read = await request("POST", "/api/v1/notifications/read", aliceShipments);
+    expect(read.status).toBe(200);
+    expect(await read.json()).toEqual({ unreadCount: 0 });
+
+    const after = await request("GET", "/api/v1/notifications?limit=1", aliceShipments);
+    const body = await after.json();
+    expect(body.unreadCount).toBe(0);
+    expect(body.notifications).toHaveLength(1);
+    expect(body.notifications[0].read).toBe(true);
+  });
+
   it("bloquea la cuenta tras 5 fallos con una respuesta idéntica", async () => {
     const bodies = [];
     for (let i = 0; i < 5; i++) {

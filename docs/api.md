@@ -234,7 +234,7 @@ El reclamo cuesta lo mismo que el rastreo (siempre se calcula el HMAC) y cada fa
 | `404`     | `not_found`: envío ajeno o inexistente                                                                              |
 | `429`     | Más de 60 peticiones del usuario por minuto (compartido con listar y consultar)                                     |
 
-Cada agenda o reprogramación deja un evento `scheduled` o `rescheduled` en la bitácora y un aviso simulado con cuerpo genérico.
+Cada agenda o reprogramación deja un evento `scheduled` o `rescheduled` en la bitácora y un aviso simulado con cuerpo genérico, que el usuario consulta en [`GET /api/v1/notifications`](#notificaciones).
 
 #### Prueba de autorización negativa
 
@@ -254,6 +254,51 @@ curl -si -b bob.txt -X PATCH -H 'content-type: application/json' \
 
 # Sin cookie: 401.
 curl -si http://localhost:3000/api/v1/shipments
+```
+
+### Notificaciones
+
+Avisos simulados del usuario de la sesión: se generan al agendar, al reprogramar y cuando un operador cambia el estado de un envío. La guía para conectarlos a la UI del portal está en [notificaciones.md](notificaciones.md).
+
+- El usuario sale siempre de la sesión. No hay identificador de aviso ni de usuario en la URL, así que no hay objeto ajeno que pedir: cada consulta y cada marcado se filtran por el usuario de la sesión, con RLS como segunda capa.
+- El cuerpo es una plantilla fija, sin guía, ULID, nombre, teléfono, dirección, ciudad ni franja.
+- Sin sesión: `401 unauthorized`. Límite: 60 peticiones por minuto por usuario (`NOTIFICATIONS_RATE_LIMIT_*`), con `429` y `Retry-After`.
+
+#### `GET /api/v1/notifications`
+
+Parámetro opcional `?limit=` de 1 a 50 (20 por defecto). Cualquier otro parámetro, como `userId`, da `400 bad_request`.
+
+`200`, del más reciente al más antiguo, con el total de no leídos:
+
+```json
+{
+  "notifications": [
+    {
+      "kind": "shipment_rescheduled",
+      "body": "Hay una novedad en uno de tus envíos. Entra a RutaSegura para ver el detalle.",
+      "createdAt": "2026-09-28T02:47:58.000Z",
+      "read": false
+    }
+  ],
+  "unreadCount": 1
+}
+```
+
+`kind` es `shipment_scheduled`, `shipment_rescheduled` o `shipment_status_changed`.
+
+#### `POST /api/v1/notifications/read`
+
+Sin cuerpo. Marca como leídos todos los avisos pendientes del usuario de la sesión y responde `200 {"unreadCount":0}`. Es idempotente.
+
+#### Prueba de autorización negativa
+
+El smoke en Docker la ejecuta en cada PR: Alice tiene 2 avisos por agendar y reprogramar; Bob lista 0, su `POST /read` no cambia el contador de Alice y `?userId=` responde 400. A mano:
+
+```bash
+curl -s -b bob.txt http://localhost:3000/api/v1/notifications        # {"notifications":[],"unreadCount":0}
+curl -s -b bob.txt -X POST http://localhost:3000/api/v1/notifications/read
+curl -s -b alice.txt http://localhost:3000/api/v1/notifications      # unreadCount sigue en 2
+curl -si http://localhost:3000/api/v1/notifications                  # 401 sin cookie
 ```
 
 ### Rutas inexistentes

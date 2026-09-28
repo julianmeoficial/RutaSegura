@@ -20,7 +20,7 @@ Se clasificó como **denegación de servicio en la capa cliente** (STRIDE: Denia
 
 ## Decisiones que lo evitan
 
-| Decisión                                                                                            | Hipótesis que neutraliza            | Dónde                           |
+| Decisión                                                                                            | Hipótesis que neutraliza            | ¿Dónde?                         |
 | --------------------------------------------------------------------------------------------------- | ----------------------------------- | ------------------------------- |
 | Todo documento se renderiza en el servidor; el contenido útil llega en el HTML                      | 3 y 4                               | `layout.tsx`, Server Components |
 | Cero scripts, fuentes o estilos de terceros; ningún origen externo en la CSP                        | 2                                   | `security-headers.ts`           |
@@ -82,7 +82,7 @@ El job `Chromium y WebKit` es un check obligatorio de la protección de `main`: 
 
 ## Evidencia
 
-| Fecha      | Dónde                                                                          | Resultado                                                                                                     |
+| Fecha      | ¿Dónde?                                                                        | Resultado                                                                                                     |
 | ---------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
 | 27/09/2026 | Local, macOS                                                                   | 9 de 9 pruebas en Chromium, WebKit y WebKit iPhone                                                            |
 | 27/09/2026 | CI de la [PR #1](https://github.com/julianmeoficial/RutaSegura/pull/1), Ubuntu | Job `Chromium y WebKit` en verde                                                                              |

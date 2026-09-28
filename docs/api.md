@@ -76,7 +76,7 @@ Todas las mutaciones exigen `Content-Type: application/json` (cuerpo de 16 KiB c
 { "email": "ana@example.org", "password": "caballo-bateria-grapa", "fullName": "Ana Pérez" }
 ```
 
-| Respuesta | Cuándo                                                                           |
+| Respuesta | ¿Cuándo?                                                                         |
 | --------- | -------------------------------------------------------------------------------- |
 | `201`     | `{"status":"accepted"}`, tanto si la cuenta se creó como si el correo ya existía |
 | `400`     | Cuerpo inválido, contraseña fuera de política o campos adicionales               |
@@ -94,7 +94,7 @@ Todas las mutaciones exigen `Content-Type: application/json` (cuerpo de 16 KiB c
 { "user": { "id": "…", "email": "ana@example.org", "fullName": "Ana Pérez", "role": "customer" } }
 ```
 
-| Respuesta | Cuándo                                                                               |
+| Respuesta | ¿Cuándo?                                                                             |
 | --------- | ------------------------------------------------------------------------------------ |
 | `401`     | `invalid_credentials`: usuario inexistente, contraseña incorrecta o cuenta bloqueada |
 | `429`     | Más de 10 intentos por IP o por correo en 15 min, con `Retry-After`                  |
@@ -134,7 +134,7 @@ Consulta pública de una guía con doble dato:
 }
 ```
 
-| Respuesta | Cuándo                                                                       |
+| Respuesta | ¿Cuándo?                                                                     |
 | --------- | ---------------------------------------------------------------------------- |
 | `400`     | Guía fuera del formato `RS` más 10 dígitos, o dígitos que no sean 4          |
 | `404`     | `tracking_not_found`: guía inexistente o dígitos incorrectos, sin distinción |
@@ -177,7 +177,7 @@ No existe endpoint para que el cliente cambie el estado logístico: eso es una o
 }
 ```
 
-| Respuesta | Cuándo                                                                                   |
+| Respuesta | ¿Cuándo?                                                                                 |
 | --------- | ---------------------------------------------------------------------------------------- |
 | `200`     | Guía libre (queda a nombre del usuario) o ya reclamada por él: el reclamo es idempotente |
 | `400`     | Mismo formato que el rastreo                                                             |

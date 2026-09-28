@@ -1,7 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
   check,
-  date,
   index,
   integer,
   pgEnum,
@@ -109,29 +108,13 @@ export const shipments = pgTable(
   "shipments",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    publicId: text("public_id"),
-    ownerId: uuid("owner_id").references(() => users.id, { onDelete: "set null" }),
     trackingNumber: text("tracking_number").notNull(),
     recipientName: text("recipient_name").notNull(),
     recipientPhoneLast4Hmac: text("recipient_phone_last4_hmac").notNull(),
     status: shipmentStatus("status").notNull().default("created"),
-    windowDate: date("window_date"),
-    windowSlot: text("window_slot"),
     createdAt,
   },
-  (table) => [
-    uniqueIndex("shipments_tracking_number_unique").on(table.trackingNumber),
-    uniqueIndex("shipments_public_id_unique").on(table.publicId),
-    index("shipments_owner_idx").on(table.ownerId),
-    check(
-      "shipments_window_slot_allowed",
-      sql`${table.windowSlot} is null or ${table.windowSlot} in ('08-10', '10-12', '12-14', '14-16', '16-18')`,
-    ),
-    check(
-      "shipments_window_complete",
-      sql`(${table.windowDate} is null) = (${table.windowSlot} is null)`,
-    ),
-  ],
+  (table) => [uniqueIndex("shipments_tracking_number_unique").on(table.trackingNumber)],
 );
 
 export const shipmentEvents = pgTable(
@@ -146,55 +129,4 @@ export const shipmentEvents = pgTable(
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
   },
   (table) => [index("shipment_events_shipment_idx").on(table.shipmentId, table.occurredAt)],
-);
-
-export const shipmentAuditType = pgEnum("shipment_audit_type", [
-  "claimed",
-  "scheduled",
-  "rescheduled",
-  "status_changed",
-]);
-
-/**
- * Bitácora de agenda y de estado. Sin guía, correo, IP ni nombre: solo ids
- * internos y el tipo de evento. Consultable por envío y por actor. Retención
- * prevista: 365 días (purga fuera de este sprint).
- */
-export const shipmentAuditEvents = pgTable(
-  "shipment_audit_events",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shipmentId: uuid("shipment_id")
-      .notNull()
-      .references(() => shipments.id, { onDelete: "cascade" }),
-    actorUserId: uuid("actor_user_id").references(() => users.id, { onDelete: "set null" }),
-    type: shipmentAuditType("type").notNull(),
-    fromStatus: shipmentStatus("from_status"),
-    toStatus: shipmentStatus("to_status"),
-    createdAt,
-  },
-  (table) => [
-    index("shipment_audit_shipment_idx").on(table.shipmentId, table.createdAt),
-    index("shipment_audit_actor_idx").on(table.actorUserId, table.createdAt),
-  ],
-);
-
-export const notificationKind = pgEnum("notification_kind", [
-  "shipment_scheduled",
-  "shipment_status_changed",
-]);
-
-/** Avisos simulados: el cuerpo es una plantilla fija, sin datos del envío. */
-export const notifications = pgTable(
-  "notifications",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    kind: notificationKind("kind").notNull(),
-    body: text("body").notNull(),
-    createdAt,
-  },
-  (table) => [index("notifications_user_idx").on(table.userId, table.createdAt)],
 );

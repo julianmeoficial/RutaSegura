@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, isNull, notInArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, isNull, notInArray, sql } from "drizzle-orm";
 import { schema } from "@rutasegura/database";
 import type { Tx } from "./db";
 
@@ -97,6 +97,27 @@ export async function updateShipmentWindow(
         eq(shipments.id, id),
         eq(shipments.ownerId, ownerId),
         notInArray(shipments.status, NOT_RESCHEDULABLE),
+      ),
+    )
+    .returning(shipmentColumns);
+  return shipment;
+}
+
+/** Quita la franja solo si el envío es del dueño, sigue siendo reprogramable y tiene franja. */
+export async function clearShipmentWindow(
+  tx: Tx,
+  id: string,
+  ownerId: string,
+): Promise<ShipmentRow | undefined> {
+  const [shipment] = await tx
+    .update(shipments)
+    .set({ windowDate: null, windowSlot: null })
+    .where(
+      and(
+        eq(shipments.id, id),
+        eq(shipments.ownerId, ownerId),
+        notInArray(shipments.status, NOT_RESCHEDULABLE),
+        isNotNull(shipments.windowDate),
       ),
     )
     .returning(shipmentColumns);

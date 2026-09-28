@@ -197,6 +197,7 @@ export const shipmentAuditEventType = pgEnum("shipment_audit_event_type", [
   "scheduled",
   "rescheduled",
   "status_changed",
+  "unscheduled",
 ]);
 
 /**
@@ -234,6 +235,7 @@ export const notificationKind = pgEnum("notification_kind", [
   "shipment_scheduled",
   "shipment_rescheduled",
   "shipment_status_changed",
+  "shipment_unscheduled",
 ]);
 
 /** Avisos simulados. El cuerpo es una plantilla fija, sin datos del envío. */

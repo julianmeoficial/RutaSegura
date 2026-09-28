@@ -22,6 +22,13 @@
       "when": 1790563593666,
       "tag": "0002_notifications_read",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790566407990,
+      "tag": "0003_shipments_unschedule",
+      "breakpoints": true
     }
   ]
 }

@@ -145,7 +145,7 @@ Un fallo al escribir la bitácora se registra en el log, pero no tumba el login 
 ## Pruebas
 
 - **Unitarias** (`pnpm test`): hash Argon2id y parámetros; JWT válido, vencido, `alg: none`, otra audiencia, otro emisor, otra clave y rol alterado; duración del bloqueo; limitador; nombres y atributos de cookie; HMAC del rastreo; lectura de IP y límite del cuerpo; rechazo de CSRF en `proxy.ts`; contratos.
-- **Smoke en Docker** (`pnpm test:smoke`): 21 casos contra la app real con PostgreSQL y Redis, incluidas las pruebas negativas de IDOR sobre envíos y avisos. Ver [desarrollo.md](desarrollo.md#pruebas-smoke-en-docker).
+- **Smoke en Docker** (`pnpm test:smoke`): 25 casos contra la app real con PostgreSQL y Redis, incluidas las pruebas negativas de IDOR sobre envíos y avisos. Ver [desarrollo.md](desarrollo.md#pruebas-smoke-en-docker).
 
 ## Pendiente
 

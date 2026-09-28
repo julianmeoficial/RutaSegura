@@ -6,21 +6,21 @@ El contrato HTTP de cada endpoint está en [api.md](api.md#notificaciones).
 
 ## ¿Qué existe hoy?
 
-| Pieza         | Qué hace                                                                                                            | ¿Dónde vive?                                  |
-| ------------- | ------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
-| Generación    | `enqueueNotification` guarda la fila con el cuerpo fijo y registra `notification.enqueued` en el log                | `server/notifications/simulate.ts`            |
-| Disparadores  | Agendar (`shipment_scheduled`), reprogramar (`shipment_rescheduled`) y cambio de estado (`shipment_status_changed`) | `server/services/shipments.ts`                |
-| Tabla         | `notifications`: `user_id`, `kind`, `body`, `read_at`, `created_at`, con RLS por `app.user_id`                      | migraciones `0001` y `0002`                   |
-| Lectura       | `listNotificationsForUser(userId, limit)` y `GET /api/v1/notifications`                                             | `server/services/notifications.ts`, `app/api` |
-| Marcar leídos | `markNotificationsReadForUser(userId)` y `POST /api/v1/notifications/read`                                          | los mismos                                    |
-| Contratos     | `notificationSchema`, `notificationListResponseSchema`, `notificationListQuerySchema`                               | `packages/contracts/src/notifications.ts`     |
+| Pieza         | Qué hace                                                                                                                                                         | ¿Dónde vive?                                  |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| Generación    | `enqueueNotification` guarda la fila con el cuerpo fijo y registra `notification.enqueued` en el log                                                             | `server/notifications/simulate.ts`            |
+| Disparadores  | Agendar (`shipment_scheduled`), reprogramar (`shipment_rescheduled`), cancelar la agenda (`shipment_unscheduled`) y cambio de estado (`shipment_status_changed`) | `server/services/shipments.ts`                |
+| Tabla         | `notifications`: `user_id`, `kind`, `body`, `read_at`, `created_at`, con RLS por `app.user_id`                                                                   | migraciones `0001`, `0002` y `0003`           |
+| Lectura       | `listNotificationsForUser(userId, limit)` y `GET /api/v1/notifications`                                                                                          | `server/services/notifications.ts`, `app/api` |
+| Marcar leídos | `markNotificationsReadForUser(userId)` y `POST /api/v1/notifications/read`                                                                                       | los mismos                                    |
+| Contratos     | `notificationSchema`, `notificationListResponseSchema`, `notificationListQuerySchema`                                                                            | `packages/contracts/src/notifications.ts`     |
 
 No hay envío real por correo, SMS ni push: "simulada" significa que el aviso queda en la base y en el log. Si más adelante se conecta un proveedor, se llama desde `enqueueNotification` con el mismo cuerpo fijo.
 
 ## Reglas que la UI debe respetar
 
 - **El cuerpo es fijo y no se enriquece.** Siempre es _"Hay una novedad en uno de tus envíos. Entra a RutaSegura para ver el detalle."_. La UI no debe añadir guía, ULID, nombre, teléfono, dirección, ciudad ni franja al aviso, ni en el texto ni en atributos `title` o `aria-label`. El detalle se ve entrando al envío, que sí pasa por `assertOwnership`.
-- **El texto por tipo lo pone la UI.** `kind` sirve para elegir icono y título ("Entrega agendada", "Entrega reprogramada", "Tu envío cambió de estado"). Esos textos viven en el frontend y tampoco llevan datos del envío.
+- **El texto por tipo lo pone la UI.** `kind` sirve para elegir icono y título ("Entrega agendada", "Entrega reprogramada", "Agenda cancelada", "Tu envío cambió de estado"). Esos textos viven en el frontend y tampoco llevan datos del envío.
 - **Un aviso no enlaza a un envío concreto.** A propósito no trae identificador del envío: el enlace va a la lista de envíos (`/envios` o la ruta que defina el diseño).
 - **Nunca se pide por usuario.** La API no acepta `userId` ni `ownerId`; el usuario sale de la sesión. Un parámetro extra en la URL da `400`.
 

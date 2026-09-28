@@ -43,29 +43,29 @@ Desde el Sprint 1, RutaSegura cubre OWASP A07 y A01 con estos controles; el deta
 
 Desde la Phase 9 la API de envíos ([api.md](api.md#envíos-y-agenda)) cubre OWASP A01 (IDOR) y A09 con estas capas:
 
-| Capa               | Control                                                                                                                                    | ¿Dónde vive?                                |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
-| Identidad          | El dueño sale de `authenticate()`; los contratos `.strict()` rechazan `ownerId` y `userId`                                                 | `require-user.ts`, `contracts/shipments.ts` |
-| Autorización       | `assertOwnership({ ownerId }, userId)` por igualdad exacta en cada lectura y escritura; `ownerId` nulo no es de nadie                      | `server/authorization/ownership.ts`         |
-| Respuesta uniforme | Ajeno, inexistente o mal formado: `404 not_found`, nunca `403`. `OwnershipError` se traduce a 404 en `withErrorHandling`                   | `server/http/guards.ts`                     |
-| Identificadores    | ULID de 128 bits (80 aleatorios, `crypto.randomBytes`) en la API; el UUID interno no sale del servidor                                     | `server/ids/ulid.ts`                        |
-| Reclamo            | Guía más últimos 4 dígitos, con el mismo HMAC y los mismos límites que el rastreo; guía de otro usuario responde 404                       | `services/shipments.ts`                     |
-| RLS en PostgreSQL  | Políticas sobre `owner_id = app.user_id` en `shipments`; eventos, bitácora y avisos heredan la visibilidad del envío o del usuario         | migración `0001_shipments_agenda.sql`       |
-| Bitácora           | `shipment_audit_events`: `claimed`, `scheduled`, `rescheduled`, `status_changed`, con actor por id interno; sin IP, correo, guía ni nombre | `repositories/shipments.ts`                 |
-| Avisos             | Cuerpo fijo sin guía, ULID, nombre, teléfono, dirección, ciudad ni franja                                                                  | `server/notifications/simulate.ts`          |
-| Lectura de avisos  | `GET /api/v1/notifications` y `POST /read` filtran por el usuario de la sesión; sin identificadores en la URL y parámetros extra con 400   | `services/notifications.ts`                 |
-| Rate limit         | 60 peticiones por minuto por usuario (clave con HMAC del id) para envíos y, por separado, para avisos                                      | `rate-limit/policies.ts`                    |
+| Capa               | Control                                                                                                                                                    | ¿Dónde vive?                                |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| Identidad          | El dueño sale de `authenticate()`; los contratos `.strict()` rechazan `ownerId` y `userId`                                                                 | `require-user.ts`, `contracts/shipments.ts` |
+| Autorización       | `assertOwnership({ ownerId }, userId)` por igualdad exacta en cada lectura y escritura; `ownerId` nulo no es de nadie                                      | `server/authorization/ownership.ts`         |
+| Respuesta uniforme | Ajeno, inexistente o mal formado: `404 not_found`, nunca `403`, también en `DELETE .../schedule`. `OwnershipError` se traduce a 404 en `withErrorHandling` | `server/http/guards.ts`                     |
+| Identificadores    | ULID de 128 bits (80 aleatorios, `crypto.randomBytes`) en la API; el UUID interno no sale del servidor                                                     | `server/ids/ulid.ts`                        |
+| Reclamo            | Guía más últimos 4 dígitos, con el mismo HMAC y los mismos límites que el rastreo; guía de otro usuario responde 404                                       | `services/shipments.ts`                     |
+| RLS en PostgreSQL  | Políticas sobre `owner_id = app.user_id` en `shipments`; eventos, bitácora y avisos heredan la visibilidad del envío o del usuario                         | migración `0001_shipments_agenda.sql`       |
+| Bitácora           | `shipment_audit_events`: `claimed`, `scheduled`, `rescheduled`, `unscheduled`, `status_changed`, con actor por id interno; sin IP, correo, guía ni nombre  | `repositories/shipments.ts`                 |
+| Avisos             | Cuerpo fijo sin guía, ULID, nombre, teléfono, dirección, ciudad ni franja                                                                                  | `server/notifications/simulate.ts`          |
+| Lectura de avisos  | `GET /api/v1/notifications` y `POST /read` filtran por el usuario de la sesión; sin identificadores en la URL y parámetros extra con 400                   | `services/notifications.ts`                 |
+| Rate limit         | 60 peticiones por minuto por usuario (clave con HMAC del id) para envíos y, por separado, para avisos                                                      | `rate-limit/policies.ts`                    |
 
 ### RLS como defensa en profundidad
 
 Cada petición abre una transacción y fija `app.user_id` y, cuando aplica, `app.mode` con `set_config(..., true)` (equivalente a `SET LOCAL`): el valor muere con la transacción y no pasa a otra petición que reutilice la conexión del pool.
 
-| `app.mode`        | ¿Quién lo usa?              | ¿Qué permite?                                                               |
-| ----------------- | --------------------------- | --------------------------------------------------------------------------- |
-| _(vacío)_         | Listar, consultar y agendar | Solo filas con `owner_id = app.user_id`                                     |
-| `public_tracking` | `services/tracking.ts`      | `SELECT` de envíos y eventos; el filtro por guía y dígitos lo hace la app   |
-| `claim`           | Reclamo                     | `SELECT` por guía y `UPDATE` solo si `owner_id IS NULL` y queda como propio |
-| `operator`        | `transitionShipmentStatus`  | Cambio de estado, evento de rastreo y aviso al dueño                        |
+| `app.mode`        | ¿Quién lo usa?                                  | ¿Qué permite?                                                               |
+| ----------------- | ----------------------------------------------- | --------------------------------------------------------------------------- |
+| _(vacío)_         | Listar, consultar, agendar y cancelar la agenda | Solo filas con `owner_id = app.user_id`                                     |
+| `public_tracking` | `services/tracking.ts`                          | `SELECT` de envíos y eventos; el filtro por guía y dígitos lo hace la app   |
+| `claim`           | Reclamo                                         | `SELECT` por guía y `UPDATE` solo si `owner_id IS NULL` y queda como propio |
+| `operator`        | `transitionShipmentStatus`                      | Cambio de estado, evento de rastreo y aviso al dueño                        |
 
 En `notifications`, `SELECT` y `UPDATE` (marcar como leído) exigen `user_id = app.user_id` en `USING` y en `WITH CHECK`: otro usuario no puede marcar ni reasignarse avisos ajenos. Verificado con un rol no dueño.
 

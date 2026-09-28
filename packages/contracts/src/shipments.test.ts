@@ -77,8 +77,14 @@ describe("respuestas de envío", () => {
       ...summary,
       audit: [
         { type: "claimed", fromStatus: null, toStatus: null, createdAt: "2026-09-27T12:00:00Z" },
+        {
+          type: "unscheduled",
+          fromStatus: null,
+          toStatus: null,
+          createdAt: "2026-09-27T12:05:00Z",
+        },
       ],
     });
-    expect(detail.audit).toHaveLength(1);
+    expect(detail.audit.map((event) => event.type)).toEqual(["claimed", "unscheduled"]);
   });
 });

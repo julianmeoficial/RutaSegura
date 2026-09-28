@@ -16,6 +16,7 @@ import { enqueueNotification } from "@/server/notifications/simulate";
 import { withRlsContext } from "@/server/repositories/db";
 import {
   claimShipment,
+  clearShipmentWindow,
   findShipmentById,
   findShipmentByPublicId,
   findShipmentByTrackingNumber,
@@ -148,6 +149,35 @@ export async function scheduleShipment(
       userId,
       kind: rescheduled ? "shipment_rescheduled" : "shipment_scheduled",
     });
+    return { ok: true, shipment: toSummary(updated) };
+  });
+}
+
+/**
+ * Cancela la franja de entrega. Sin franja es idempotente: responde el envío sin
+ * escribir nada. `{ ok: false }` si el envío ya está en reparto o entregado.
+ * Lanza `OwnershipError` si el envío no es del usuario.
+ */
+export async function unscheduleShipment(
+  publicId: string,
+  userId: string,
+): Promise<ScheduleResult> {
+  return withRlsContext({ userId }, async (tx): Promise<ScheduleResult> => {
+    const shipment = await findShipmentByPublicId(tx, publicId);
+    assertOwnership(shipment, userId);
+
+    if (!isReschedulable(shipment.status)) return { ok: false };
+    if (shipment.windowDate === null) return { ok: true, shipment: toSummary(shipment) };
+
+    const updated = await clearShipmentWindow(tx, shipment.id, userId);
+    if (!updated) return { ok: false };
+
+    await insertShipmentAudit(tx, {
+      shipmentId: shipment.id,
+      actorUserId: userId,
+      type: "unscheduled",
+    });
+    await enqueueNotification(tx, { userId, kind: "shipment_unscheduled" });
     return { ok: true, shipment: toSummary(updated) };
   });
 }

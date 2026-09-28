@@ -7,6 +7,7 @@ vi.mock("@/server/repositories/db", () => ({ withRlsContext }));
 
 const repo = {
   claimShipment: vi.fn(),
+  clearShipmentWindow: vi.fn(),
   findShipmentById: vi.fn(),
   findShipmentByPublicId: vi.fn(),
   findShipmentByTrackingNumber: vi.fn(),
@@ -25,7 +26,8 @@ vi.mock("@/server/audit/auth-events", () => ({ recordAuthEvent: vi.fn() }));
 
 const { OwnershipError } = await import("@/server/authorization/ownership");
 const { NOTIFICATION_BODY } = await import("@/server/notifications/simulate");
-const { scheduleShipment, transitionShipmentStatus } = await import("./shipments");
+const { scheduleShipment, transitionShipmentStatus, unscheduleShipment } =
+  await import("./shipments");
 
 vi.spyOn(console, "log").mockImplementation(() => {});
 
@@ -187,6 +189,76 @@ describe("scheduleShipment", () => {
     ).resolves.toEqual({ ok: false });
 
     expect(repo.updateShipmentWindow).not.toHaveBeenCalled();
+    expect(insertNotification).not.toHaveBeenCalled();
+  });
+});
+
+describe("unscheduleShipment", () => {
+  const scheduled = { windowDate: "2026-10-01", windowSlot: "08-10" } as const;
+
+  it("cancela la franja: bitácora `unscheduled` y aviso genérico", async () => {
+    repo.findShipmentByPublicId.mockResolvedValue(shipment(scheduled));
+    repo.clearShipmentWindow.mockResolvedValue(shipment());
+
+    const result = await unscheduleShipment(PUBLIC_ID, ALICE);
+
+    expect(result).toEqual({
+      ok: true,
+      shipment: {
+        id: PUBLIC_ID,
+        trackingNumber: "RS0000000001",
+        status: "in_transit",
+        window: null,
+      },
+    });
+    expect(withRlsContext).toHaveBeenCalledWith({ userId: ALICE }, expect.any(Function));
+    expect(repo.clearShipmentWindow).toHaveBeenCalledWith(tx, "shipment-1", ALICE);
+    expect(repo.insertShipmentAudit).toHaveBeenCalledWith(tx, {
+      shipmentId: "shipment-1",
+      actorUserId: ALICE,
+      type: "unscheduled",
+    });
+    expect(insertNotification).toHaveBeenCalledWith(tx, {
+      userId: ALICE,
+      kind: "shipment_unscheduled",
+      body: NOTIFICATION_BODY,
+    });
+  });
+
+  it("es idempotente: sin franja responde el envío y no escribe nada", async () => {
+    repo.findShipmentByPublicId.mockResolvedValue(shipment());
+
+    await expect(unscheduleShipment(PUBLIC_ID, ALICE)).resolves.toEqual({
+      ok: true,
+      shipment: expect.objectContaining({ id: PUBLIC_ID, window: null }),
+    });
+    expect(repo.clearShipmentWindow).not.toHaveBeenCalled();
+    expect(repo.insertShipmentAudit).not.toHaveBeenCalled();
+    expect(insertNotification).not.toHaveBeenCalled();
+  });
+
+  it("lanza OwnershipError para envíos ajenos o inexistentes, sin escribir", async () => {
+    repo.findShipmentByPublicId.mockResolvedValue(shipment({ ...scheduled, ownerId: BOB }));
+    await expect(unscheduleShipment(PUBLIC_ID, ALICE)).rejects.toBeInstanceOf(OwnershipError);
+
+    repo.findShipmentByPublicId.mockResolvedValue(undefined);
+    await expect(unscheduleShipment(PUBLIC_ID, ALICE)).rejects.toBeInstanceOf(OwnershipError);
+
+    expect(repo.clearShipmentWindow).not.toHaveBeenCalled();
+    expect(repo.insertShipmentAudit).not.toHaveBeenCalled();
+    expect(insertNotification).not.toHaveBeenCalled();
+  });
+
+  it("rechaza envíos en reparto o entregados", async () => {
+    repo.findShipmentByPublicId.mockResolvedValue(
+      shipment({ ...scheduled, status: "out_for_delivery" }),
+    );
+    await expect(unscheduleShipment(PUBLIC_ID, ALICE)).resolves.toEqual({ ok: false });
+
+    repo.findShipmentByPublicId.mockResolvedValue(shipment({ ...scheduled, status: "delivered" }));
+    await expect(unscheduleShipment(PUBLIC_ID, ALICE)).resolves.toEqual({ ok: false });
+
+    expect(repo.clearShipmentWindow).not.toHaveBeenCalled();
     expect(insertNotification).not.toHaveBeenCalled();
   });
 });

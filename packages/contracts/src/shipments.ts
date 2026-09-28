@@ -55,6 +55,7 @@ export const shipmentAuditTypeSchema = z.enum([
   "scheduled",
   "rescheduled",
   "status_changed",
+  "unscheduled",
 ]);
 
 export type ShipmentAuditType = z.infer<typeof shipmentAuditTypeSchema>;

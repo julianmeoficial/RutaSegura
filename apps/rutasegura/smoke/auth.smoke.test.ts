@@ -384,6 +384,66 @@ describe("smoke de autenticación en Docker", () => {
     expect(body.notifications[0].read).toBe(true);
   });
 
+  it("cancelar la agenda exige sesión", async () => {
+    const response = await request("DELETE", `/api/v1/shipments/${aliceShipmentId}/schedule`);
+    expect(response.status).toBe(401);
+  });
+
+  it("Bob no puede cancelar la agenda de Alice: 404 igual que con un ULID inexistente", async () => {
+    const unknownId = "01J8Z3K4M5N6P7Q8R9S0T1V2W3";
+
+    const cancel = await request(
+      "DELETE",
+      `/api/v1/shipments/${aliceShipmentId}/schedule`,
+      bobShipments,
+    );
+    const cancelUnknown = await request(
+      "DELETE",
+      `/api/v1/shipments/${unknownId}/schedule`,
+      bobShipments,
+    );
+    expect(cancel.status).toBe(404);
+    expect(cancelUnknown.status).toBe(404);
+    expect(await cancel.json()).toEqual(await cancelUnknown.json());
+
+    const unchanged = await request("GET", `/api/v1/shipments/${aliceShipmentId}`, aliceShipments);
+    expect((await unchanged.json()).window.slot).toBe("14-16");
+  });
+
+  it("Alice cancela su agenda de forma idempotente", async () => {
+    const path = `/api/v1/shipments/${aliceShipmentId}/schedule`;
+
+    const cancelled = await request("DELETE", path, aliceShipments);
+    expect(cancelled.status).toBe(200);
+    expect(cancelled.headers.get("ratelimit-limit")).not.toBeNull();
+    expect(await cancelled.json()).toEqual({
+      id: aliceShipmentId,
+      trackingNumber: "RS0000000001",
+      status: expect.any(String),
+      window: null,
+    });
+
+    const again = await request("DELETE", path, aliceShipments);
+    expect(again.status).toBe(200);
+    expect((await again.json()).window).toBeNull();
+  });
+
+  it("la cancelación queda en la bitácora y genera un único aviso genérico", async () => {
+    const detail = await request("GET", `/api/v1/shipments/${aliceShipmentId}`, aliceShipments);
+    expect((await detail.json()).audit.map((event: { type: string }) => event.type)).toEqual([
+      "claimed",
+      "scheduled",
+      "rescheduled",
+      "unscheduled",
+    ]);
+
+    const list = await request("GET", "/api/v1/notifications?limit=1", aliceShipments);
+    const body = await list.json();
+    expect(body.unreadCount).toBe(1);
+    expect(body.notifications[0].kind).toBe("shipment_unscheduled");
+    expect(JSON.stringify(body)).not.toMatch(/RS\d{10}|[0-7][0-9A-HJKMNP-TV-Z]{25}|userId/);
+  });
+
   it("bloquea la cuenta tras 5 fallos con una respuesta idéntica", async () => {
     const bodies = [];
     for (let i = 0; i < 5; i++) {

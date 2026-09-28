@@ -31,4 +31,15 @@ describe("notificationSchema", () => {
     });
     expect(Object.keys(parsed).sort()).toEqual(["body", "createdAt", "kind", "read"]);
   });
+
+  it("acepta el aviso de agenda cancelada", () => {
+    expect(
+      notificationSchema.safeParse({
+        kind: "shipment_unscheduled",
+        body: "Hay una novedad en uno de tus envíos.",
+        createdAt: "2026-09-27T12:00:00Z",
+        read: false,
+      }).success,
+    ).toBe(true);
+  });
 });

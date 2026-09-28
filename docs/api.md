@@ -151,12 +151,13 @@ Endpoints autenticados de la Phase 9. El usuario **reclama** una guía existente
 - Sin sesión: `401 unauthorized`. Envío ajeno, inexistente o con un identificador mal formado: `404 not_found`, con el mismo cuerpo en los tres casos. Nunca `403`, para no confirmar que el recurso existe.
 - Las respuestas nunca incluyen nombre ni teléfono del destinatario.
 
-| Método  | Ruta                              | Efecto                             |
-| ------- | --------------------------------- | ---------------------------------- |
-| `POST`  | `/api/v1/shipments/claim`         | Vincula una guía a la cuenta       |
-| `GET`   | `/api/v1/shipments`               | Lista solo los envíos del usuario  |
-| `GET`   | `/api/v1/shipments/{id}`          | Detalle y bitácora si es el dueño  |
-| `PATCH` | `/api/v1/shipments/{id}/schedule` | Crea o cambia la franja de entrega |
+| Método   | Ruta                              | Efecto                             |
+| -------- | --------------------------------- | ---------------------------------- |
+| `POST`   | `/api/v1/shipments/claim`         | Vincula una guía a la cuenta       |
+| `GET`    | `/api/v1/shipments`               | Lista solo los envíos del usuario  |
+| `GET`    | `/api/v1/shipments/{id}`          | Detalle y bitácora si es el dueño  |
+| `PATCH`  | `/api/v1/shipments/{id}/schedule` | Crea o cambia la franja de entrega |
+| `DELETE` | `/api/v1/shipments/{id}/schedule` | Cancela la franja de entrega       |
 
 No existe endpoint para que el cliente cambie el estado logístico: eso es una operación de operador (`transitionShipmentStatus` en el servidor).
 
@@ -236,6 +237,30 @@ El reclamo cuesta lo mismo que el rastreo (siempre se calcula el HMAC) y cada fa
 
 Cada agenda o reprogramación deja un evento `scheduled` o `rescheduled` en la bitácora y un aviso simulado con cuerpo genérico, que el usuario consulta en [`GET /api/v1/notifications`](#notificaciones).
 
+#### `DELETE /api/v1/shipments/{id}/schedule`
+
+Sin cuerpo. Deja el envío sin franja (`"window": null`) y responde `200` con el envío actualizado. Si ya no tenía franja, responde igual sin escribir nada: la cancelación es idempotente.
+
+```json
+{
+  "id": "01K66Z8Q3W0V2R8E1XJ5N7C4TB",
+  "trackingNumber": "RS0000000001",
+  "status": "in_transit",
+  "window": null
+}
+```
+
+| Respuesta | ¿Cuándo?                                                                                 |
+| --------- | ---------------------------------------------------------------------------------------- |
+| `200`     | Franja cancelada, o el envío ya no tenía franja                                          |
+| `400`     | `invalid_schedule`: envío `out_for_delivery` o `delivered`, que ya no se puede tocar     |
+| `401`     | Sin sesión                                                                               |
+| `403`     | Petición desde otro origen, rechazada en `proxy.ts`                                      |
+| `404`     | `not_found`: envío ajeno, inexistente o con ULID mal formado, con el mismo cuerpo        |
+| `429`     | Más de 60 peticiones del usuario por minuto (compartido con listar, consultar y agendar) |
+
+Cada cancelación real deja un evento `unscheduled` en la bitácora, con el usuario como actor y la hora del servidor, y un aviso `shipment_unscheduled` con el mismo cuerpo genérico. La repetición idempotente no deja ni evento ni aviso.
+
 #### Prueba de autorización negativa
 
 El smoke en Docker ([`auth.smoke.test.ts`](../apps/rutasegura/smoke/auth.smoke.test.ts)) la ejecuta en cada PR. A mano:
@@ -251,6 +276,8 @@ curl -si -b bob.txt http://localhost:3000/api/v1/shipments/<ULID-de-Alice>
 curl -si -b bob.txt -X PATCH -H 'content-type: application/json' \
   -d '{"date":"2026-10-01","slot":"08-10"}' \
   http://localhost:3000/api/v1/shipments/<ULID-de-Alice>/schedule
+curl -si -b bob.txt -X DELETE \
+  http://localhost:3000/api/v1/shipments/<ULID-de-Alice>/schedule
 
 # Sin cookie: 401.
 curl -si http://localhost:3000/api/v1/shipments
@@ -258,7 +285,7 @@ curl -si http://localhost:3000/api/v1/shipments
 
 ### Notificaciones
 
-Avisos simulados del usuario de la sesión: se generan al agendar, al reprogramar y cuando un operador cambia el estado de un envío. La guía para conectarlos a la UI del portal está en [notificaciones.md](notificaciones.md).
+Avisos simulados del usuario de la sesión: se generan al agendar, al reprogramar, al cancelar la agenda y cuando un operador cambia el estado de un envío. La guía para conectarlos a la UI del portal está en [notificaciones.md](notificaciones.md).
 
 - El usuario sale siempre de la sesión. No hay identificador de aviso ni de usuario en la URL, así que no hay objeto ajeno que pedir: cada consulta y cada marcado se filtran por el usuario de la sesión, con RLS como segunda capa.
 - El cuerpo es una plantilla fija, sin guía, ULID, nombre, teléfono, dirección, ciudad ni franja.
@@ -284,7 +311,7 @@ Parámetro opcional `?limit=` de 1 a 50 (20 por defecto). Cualquier otro paráme
 }
 ```
 
-`kind` es `shipment_scheduled`, `shipment_rescheduled` o `shipment_status_changed`.
+`kind` es `shipment_scheduled`, `shipment_rescheduled`, `shipment_unscheduled` o `shipment_status_changed`.
 
 #### `POST /api/v1/notifications/read`
 

@@ -36,6 +36,10 @@ Todos los cambios relevantes de RutaSegura se registran aquí. El formato sigue 
   - Rate limit por usuario (`NOTIFICATIONS_RATE_LIMIT_*`).
   - Casos smoke: sin sesión 401; Bob no ve ni marca los avisos de Alice; `?userId=` responde 400.
   - `docs/notificaciones.md`: guía para conectar los avisos a la UI del portal cuando lleguen diseño y frontend.
+- Cancelación de la agenda (OWASP A01 y A09):
+  - `DELETE /api/v1/shipments/{id}/schedule`: deja el envío sin franja; idempotente, `400 invalid_schedule` si ya está en reparto o entregado y `404 not_found` si es ajeno o no existe.
+  - Migración `0003`: evento de bitácora `unscheduled` y tipo de aviso `shipment_unscheduled`.
+  - Casos smoke: sin sesión 401; Bob recibe 404 al cancelar la agenda de Alice y la franja queda intacta; cancelación idempotente, bitácora y aviso genérico.
 
 ### Cambiado
 

@@ -4,6 +4,7 @@ export const notificationKindSchema = z.enum([
   "shipment_scheduled",
   "shipment_rescheduled",
   "shipment_status_changed",
+  "shipment_unscheduled",
 ]);
 
 export type NotificationKind = z.infer<typeof notificationKindSchema>;

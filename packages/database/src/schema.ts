@@ -246,13 +246,22 @@ export const notifications = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     kind: notificationKind("kind").notNull(),
     body: text("body").notNull(),
+    readAt: timestamp("read_at", { withTimezone: true }),
     createdAt,
   },
   (table) => [
     index("notifications_user_idx").on(table.userId, table.createdAt),
+    index("notifications_user_unread_idx")
+      .on(table.userId)
+      .where(sql`${table.readAt} is null`),
     pgPolicy("notifications_select", {
       for: "select",
       using: sql`user_id = ${appUserId}`,
+    }),
+    pgPolicy("notifications_update_owner", {
+      for: "update",
+      using: sql`user_id = ${appUserId}`,
+      withCheck: sql`user_id = ${appUserId}`,
     }),
     pgPolicy("notifications_insert", {
       for: "insert",

@@ -30,6 +30,12 @@ Todos los cambios relevantes de RutaSegura se registran aquí. El formato sigue 
   - Bitácora de envíos sin datos personales en claro y avisos simulados con cuerpo genérico.
   - Rate limit por usuario para listar, consultar y agendar (`SHIPMENTS_RATE_LIMIT_*`).
   - Casos smoke de IDOR: Bob recibe 404 sobre el envío de Alice.
+- Notificaciones simuladas visibles por API (OWASP A01):
+  - `GET /api/v1/notifications` (avisos del usuario de la sesión, `?limit=` de 1 a 50, con `unreadCount`) y `POST /api/v1/notifications/read`.
+  - Migración `0002`: columna `read_at`, índice de no leídos y política RLS de `UPDATE` por `app.user_id`.
+  - Rate limit por usuario (`NOTIFICATIONS_RATE_LIMIT_*`).
+  - Casos smoke: sin sesión 401; Bob no ve ni marca los avisos de Alice; `?userId=` responde 400.
+  - `docs/notificaciones.md`: guía para conectar los avisos a la UI del portal cuando lleguen diseño y frontend.
 
 ### Cambiado
 

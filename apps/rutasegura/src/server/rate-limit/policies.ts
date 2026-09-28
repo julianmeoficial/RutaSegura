@@ -52,6 +52,18 @@ export function shipmentsRules(userId: string): RateLimitRule[] {
   ];
 }
 
+/** Consultar y marcar avisos: límite por usuario, con su id como HMAC. */
+export function notificationsRules(userId: string): RateLimitRule[] {
+  const env = getEnv();
+  return [
+    {
+      key: ruleKey("notifications", "user", userId),
+      limit: env.NOTIFICATIONS_RATE_LIMIT_MAX,
+      windowSeconds: env.NOTIFICATIONS_RATE_LIMIT_WINDOW_SECONDS,
+    },
+  ];
+}
+
 /**
  * Aplica las reglas en Redis. Si Redis no responde, lanza: los endpoints de
  * autenticación fallan cerrados (503) en lugar de quedar sin límite.

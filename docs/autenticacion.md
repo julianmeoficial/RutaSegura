@@ -87,15 +87,16 @@ La rotación revoca la fila vieja con `UPDATE ... WHERE revoked_at IS NULL` dent
 
 Implementado en [`server/rate-limit`](../apps/rutasegura/src/server/rate-limit) con un script Lua (`INCR` y `PEXPIRE` atómicos) sobre Redis. Las claves son `rl:<alcance>:<dimensión>:<HMAC>`: nunca contienen la IP, el correo ni la guía en claro.
 
-| Endpoint                           | Dimensión | Límite por defecto | Ventana | Variable                                                          |
-| ---------------------------------- | --------- | ------------------ | ------- | ----------------------------------------------------------------- |
-| `POST /api/v1/auth/login`          | IP        | 10                 | 15 min  | `LOGIN_RATE_LIMIT_IP_MAX`, `LOGIN_RATE_LIMIT_WINDOW_SECONDS`      |
-| `POST /api/v1/auth/login`          | Correo    | 10                 | 15 min  | `LOGIN_RATE_LIMIT_EMAIL_MAX`                                      |
-| `POST /api/v1/auth/register`       | IP        | 5                  | 1 h     | `REGISTER_RATE_LIMIT_MAX`, `REGISTER_RATE_LIMIT_WINDOW_SECONDS`   |
-| `POST /api/v1/tracking`            | IP        | 5                  | 15 min  | `TRACKING_RATE_LIMIT_MAX`, `TRACKING_RATE_LIMIT_WINDOW_SECONDS`   |
-| `POST /api/v1/tracking`            | Guía      | 5                  | 15 min  | Las mismas                                                        |
-| `POST /api/v1/shipments/claim`     | IP y guía | 5                  | 15 min  | Las del rastreo, con los mismos contadores                        |
-| `GET` y `PATCH /api/v1/shipments…` | Usuario   | 60                 | 1 min   | `SHIPMENTS_RATE_LIMIT_MAX`, `SHIPMENTS_RATE_LIMIT_WINDOW_SECONDS` |
+| Endpoint                              | Dimensión | Límite por defecto | Ventana | Variable                                                                  |
+| ------------------------------------- | --------- | ------------------ | ------- | ------------------------------------------------------------------------- |
+| `POST /api/v1/auth/login`             | IP        | 10                 | 15 min  | `LOGIN_RATE_LIMIT_IP_MAX`, `LOGIN_RATE_LIMIT_WINDOW_SECONDS`              |
+| `POST /api/v1/auth/login`             | Correo    | 10                 | 15 min  | `LOGIN_RATE_LIMIT_EMAIL_MAX`                                              |
+| `POST /api/v1/auth/register`          | IP        | 5                  | 1 h     | `REGISTER_RATE_LIMIT_MAX`, `REGISTER_RATE_LIMIT_WINDOW_SECONDS`           |
+| `POST /api/v1/tracking`               | IP        | 5                  | 15 min  | `TRACKING_RATE_LIMIT_MAX`, `TRACKING_RATE_LIMIT_WINDOW_SECONDS`           |
+| `POST /api/v1/tracking`               | Guía      | 5                  | 15 min  | Las mismas                                                                |
+| `POST /api/v1/shipments/claim`        | IP y guía | 5                  | 15 min  | Las del rastreo, con los mismos contadores                                |
+| `GET` y `PATCH /api/v1/shipments…`    | Usuario   | 60                 | 1 min   | `SHIPMENTS_RATE_LIMIT_MAX`, `SHIPMENTS_RATE_LIMIT_WINDOW_SECONDS`         |
+| `GET` y `POST /api/v1/notifications…` | Usuario   | 60                 | 1 min   | `NOTIFICATIONS_RATE_LIMIT_MAX`, `NOTIFICATIONS_RATE_LIMIT_WINDOW_SECONDS` |
 
 - Toda respuesta de estos endpoints lleva `RateLimit-Limit`, `RateLimit-Remaining` y `RateLimit-Reset`. Al excederse: `429 rate_limited` con `Retry-After` en segundos, y un evento `rate_limited` en la bitácora.
 - Si Redis no responde, el endpoint devuelve `503`: falla cerrado en lugar de quedar sin límite.
@@ -144,7 +145,7 @@ Un fallo al escribir la bitácora se registra en el log, pero no tumba el login 
 ## Pruebas
 
 - **Unitarias** (`pnpm test`): hash Argon2id y parámetros; JWT válido, vencido, `alg: none`, otra audiencia, otro emisor, otra clave y rol alterado; duración del bloqueo; limitador; nombres y atributos de cookie; HMAC del rastreo; lectura de IP y límite del cuerpo; rechazo de CSRF en `proxy.ts`; contratos.
-- **Smoke en Docker** (`pnpm test:smoke`): 18 casos contra la app real con PostgreSQL y Redis, incluida la prueba negativa de IDOR sobre envíos. Ver [desarrollo.md](desarrollo.md#pruebas-smoke-en-docker).
+- **Smoke en Docker** (`pnpm test:smoke`): 21 casos contra la app real con PostgreSQL y Redis, incluidas las pruebas negativas de IDOR sobre envíos y avisos. Ver [desarrollo.md](desarrollo.md#pruebas-smoke-en-docker).
 
 ## Pendiente
 

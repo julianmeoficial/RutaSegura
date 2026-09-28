@@ -36,4 +36,4 @@ docker compose exec -T postgres psql -U rutasegura -d rutasegura -c \
 echo "Bitácora de envíos y avisos simulados:"
 docker compose exec -T postgres psql -U rutasegura -d rutasegura -c \
   "select type, count(*) from shipment_audit_events group by type order by type;" -c \
-  "select kind, body, count(*) from notifications group by kind, body order by kind;"
+  "select kind, body, count(*) filter (where read_at is null) as unread, count(*) from notifications group by kind, body order by kind;"

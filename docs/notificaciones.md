@@ -4,9 +4,9 @@ Los avisos que genera la agenda de entregas y los cambios de estado de un envío
 
 El contrato HTTP de cada endpoint está en [api.md](api.md#notificaciones).
 
-## Qué existe hoy
+## ¿Qué existe hoy?
 
-| Pieza         | Qué hace                                                                                                            | Dónde vive                                    |
+| Pieza         | Qué hace                                                                                                            | ¿Dónde vive?                                  |
 | ------------- | ------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
 | Generación    | `enqueueNotification` guarda la fila con el cuerpo fijo y registra `notification.enqueued` en el log                | `server/notifications/simulate.ts`            |
 | Disparadores  | Agendar (`shipment_scheduled`), reprogramar (`shipment_rescheduled`) y cambio de estado (`shipment_status_changed`) | `server/services/shipments.ts`                |
@@ -113,7 +113,7 @@ La primera versión puede refrescar al navegar o con `router.refresh()`. Si el d
 
 ## Estados que el diseño debe cubrir
 
-| Estado        | Cuándo                                      | Sugerencia                                                          |
+| Estado        | ¿Cuándo?                                    | Sugerencia                                                          |
 | ------------- | ------------------------------------------- | ------------------------------------------------------------------- |
 | Vacío         | `notifications: []`                         | Mensaje neutro y enlace a "Mis envíos"                              |
 | Con no leídos | `unreadCount > 0`                           | Contador en el menú; los no leídos con marca visible, no solo color |

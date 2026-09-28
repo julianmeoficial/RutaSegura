@@ -65,7 +65,7 @@ Los 21 casos cubren: health; registro con contraseña débil, válida y duplicad
 
 ## Scripts
 
-| Comando                                | Qué hace                                                            |
+| Comando                                | ¿Qué hace?                                                          |
 | -------------------------------------- | ------------------------------------------------------------------- |
 | `pnpm dev`                             | Servidor de desarrollo                                              |
 | `pnpm build`                           | Build de producción `standalone`                                    |

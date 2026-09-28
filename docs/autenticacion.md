@@ -4,7 +4,7 @@ Sprint 1: autenticación en el servidor (Route Handlers de Next.js) y consulta p
 
 ## Resumen de controles
 
-| Control                | Implementación                                                                                                       | Dónde vive                                        |
+| Control                | Implementación                                                                                                       | ¿Dónde vive?                                      |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
 | Hash de contraseñas    | Argon2id (`@node-rs/argon2`), 19 MiB, 2 iteraciones, paralelismo 1 (mínimo de OWASP), sal aleatoria por hash         | `server/auth/password.ts`                         |
 | Política de contraseña | De 12 a 128 caracteres, fuera de una lista de contraseñas comunes y sin contener el correo (NIST SP 800-63B)         | `packages/contracts/src/auth.ts`                  |
@@ -130,7 +130,7 @@ flowchart LR
 
 La tabla `auth_events` registra cada evento sin datos personales en claro: el correo o la guía (`subject_hash`) y la IP (`ip_hash`) van como HMAC con propósitos distintos, y el user agent se trunca a 200 caracteres.
 
-| Evento                                   | Cuándo                                                  |
+| Evento                                   | ¿Cuándo?                                                |
 | ---------------------------------------- | ------------------------------------------------------- |
 | `register_success`, `register_duplicate` | Registro nuevo o con correo existente                   |
 | `login_success`, `login_failure`         | Login correcto o credenciales inválidas                 |

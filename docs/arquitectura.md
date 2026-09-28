@@ -40,7 +40,7 @@ flowchart TB
 
 Cada flecha que cruza hacia abajo es una frontera: todo lo que llega del navegador se valida otra vez en el servidor, y ningún camino llega a la persistencia sin pasar por `server/services`.
 
-## Qué vive en cada carpeta
+## ¿Qué vive en cada carpeta?
 
 | Carpeta                                                         | Responsabilidad                                          | Estado                                         |
 | --------------------------------------------------------------- | -------------------------------------------------------- | ---------------------------------------------- |

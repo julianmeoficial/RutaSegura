@@ -16,7 +16,7 @@ RutaSegura se diseña para no repetir las debilidades del [análisis observacion
 | H-05     | Infraestructura compartida entre pruebas y producción      | Secretos por entorno; la app no arranca en producción con valores de ejemplo                                      | `env.ts`, `startup.ts`                |
 | H-06     | Seis orígenes de terceros confiados en la CSP              | Ningún origen externo en la CSP; sin scripts, fuentes ni estilos de terceros                                      | `security-headers.ts`                 |
 | H-07     | `connect-src` e `img-src` con comodín `https:`             | `connect-src 'self'`; `img-src 'self' blob: data:`                                                                | `security-headers.ts`                 |
-| H-08     | HSTS sin `preload`                                         | `max-age=63072000; includeSubDomains; preload` sobre HTTPS                                                        | `proxy.ts`                            |
+| H-08     | HSTS sin `preload`                                         | `max-age=63072000; includeSubDomains; preload` en todas las respuestas                                            | `proxy.ts`, `next.config.ts`          |
 | H-09     | Sin `COOP`, `COEP` ni `CORP`                               | Las tres cabeceras en todas las respuestas; el documento queda `crossOriginIsolated`                              | `security-headers.ts`                 |
 | H-10     | HTML cacheado un año en caché compartida                   | `Cache-Control: no-store` en la API; documentos renderizados por petición con `private, no-store`                 | `proxy.ts`, `layout.tsx`              |
 | H-11     | Banner `server` y `ETag` expuestos                         | `generateEtags: false`; sin cabecera `Server` con producto o versión                                              | `next.config.ts`                      |
@@ -85,22 +85,25 @@ El control que cuenta en la API es `assertOwnership`; la RLS evita que un error 
 ```mermaid
 flowchart TD
     req["Petición entrante"] --> api{"¿Ruta /api/?"}
-    api -- "Sí" --> apiCsp["CSP de API: default-src 'none'"]
-    apiCsp --> noStore["Cache-Control: no-store"]
+    api -- "Sí" --> preflight{"¿Preflight CORS?"}
+    preflight -- "Origen en allowlist" --> ok204["204 con cabeceras CORS"]
+    preflight -- "Origen fuera" --> deny["403 y log security.access_denied"]
+    preflight -- "No" --> csrf{"¿Mutación de otro origen fuera de la allowlist?"}
+    csrf -- "Sí" --> deny
+    csrf -- "No" --> apiCsp["CSP de API: default-src 'none'"]
+    apiCsp --> noStore["Cache-Control: no-store y CORS si el origen está en la allowlist"]
     api -- "No" --> nonce["Genera nonce de 16 bytes"]
     nonce --> docCsp["CSP de documento con el nonce"]
     docCsp --> reqHeader["Pasa la CSP a Next para firmar sus scripts"]
-    noStore --> https{"¿Llega por HTTPS?"}
-    reqHeader --> https
-    https -- "Sí" --> hsts["HSTS con preload y upgrade-insecure-requests"]
-    https -- "No" --> env{"¿APP_ENV es production?"}
-    hsts --> env
+    noStore --> hsts["HSTS con preload"]
+    reqHeader --> hsts
+    hsts --> env{"¿APP_ENV es production?"}
     env -- "No" --> robots["X-Robots-Tag: noindex, nofollow"]
     env -- "Sí" --> resp["Respuesta"]
     robots --> resp
 ```
 
-Las cabeceras fijas (`X-Content-Type-Options`, `X-Frame-Options`, `Permissions-Policy`, COOP, COEP, CORP y demás) las añade `next.config.ts` a todas las rutas, incluidos los recursos estáticos.
+Las cabeceras fijas (`Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`, `Permissions-Policy`, COOP, COEP, CORP y demás) las añade `next.config.ts` a todas las rutas, incluidos los recursos estáticos que el proxy no procesa. `upgrade-insecure-requests` sigue emitiéndose solo cuando la petición llega por HTTPS.
 
 ## Política de seguridad de contenido
 
@@ -150,7 +153,107 @@ En desarrollo, y solo ahí, la CSP añade `'unsafe-eval'` en scripts y `'unsafe-
 | `Cross-Origin-Resource-Policy` | `same-origin`                                                                        |
 | `Origin-Agent-Cluster`         | `?1`                                                                                 |
 | `X-DNS-Prefetch-Control`       | `off`                                                                                |
-| `Strict-Transport-Security`    | `max-age=63072000; includeSubDomains; preload`, solo sobre HTTPS                     |
+| `Strict-Transport-Security`    | `max-age=63072000; includeSubDomains; preload`, en todas las respuestas              |
+
+HSTS se emite también sobre HTTP porque el navegador lo ignora si no llega por HTTPS ([RFC 6797 §8.1](https://www.rfc-editor.org/rfc/rfc6797#section-8.1)). Así se cumple "en todas las respuestas" sin fijar HSTS en `http://localhost`. Lo verifican `proxy.test.ts` (documento por HTTP y HTTPS, API y 403) y `security-headers.test.ts` (estáticos).
+
+## CORS
+
+La API (`/api/*`) aplica CORS con una allowlist de orígenes exactos, en [`cors.ts`](../apps/rutasegura/src/lib/cors.ts) y [`proxy.ts`](../apps/rutasegura/src/proxy.ts).
+
+### Allowlist
+
+| Origen                                 | ¿Cuándo?                                                            |
+| -------------------------------------- | ------------------------------------------------------------------- |
+| Origen de `NEXT_PUBLIC_APP_URL`        | Siempre. El portal y la UI pública (S10) viven en la misma app Next |
+| Cada entrada de `CORS_ALLOWED_ORIGINS` | Solo si se configura. Por defecto la variable está vacía            |
+
+Reglas de `CORS_ALLOWED_ORIGINS`, validadas en [`env.ts`](../apps/rutasegura/src/server/env.ts) al arrancar (la app no arranca si la lista es inválida):
+
+- Lista separada por comas de orígenes exactos (`https://portal.example.org`), comparados por igualdad, sin normalizar subdominios.
+- Sin `*` ni comodines de subdominio: con credenciales, `*` no es válido y abriría la API a cualquier sitio.
+- Sin ruta, query ni fragmento.
+- Solo `http` o `https`; con `APP_ENV=production`, solo `https`.
+
+Estado actual por entorno:
+
+| Entorno    | `CORS_ALLOWED_ORIGINS` | Orígenes permitidos                |
+| ---------- | ---------------------- | ---------------------------------- |
+| Desarrollo | vacío                  | `http://localhost:3000`            |
+| Preview    | vacío                  | El origen de la URL de preview     |
+| Producción | vacío                  | El origen de `NEXT_PUBLIC_APP_URL` |
+
+Cualquier origen nuevo se añade aquí y en la variable del entorno, con el motivo.
+
+### Comportamiento
+
+| Petición                                                                            | Respuesta                                                                                                                                                                                 |
+| ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Preflight (`OPTIONS` con `Access-Control-Request-Method`) desde un origen permitido | `204` con `Access-Control-Allow-Origin` exacto, `Allow-Credentials: true`, `Allow-Methods: GET, POST, PUT, PATCH, DELETE`, `Allow-Headers: Content-Type`, `Max-Age: 600` y `Vary: Origin` |
+| Preflight desde un origen no permitido                                              | `403 forbidden` y log `security.access_denied` con motivo `cors_origin_rejected`                                                                                                          |
+| Lectura desde un origen permitido                                                   | Respuesta normal con `Access-Control-Allow-Origin` exacto y `Vary: Origin`                                                                                                                |
+| Lectura desde un origen no permitido                                                | Respuesta sin cabeceras CORS: el navegador no deja leerla                                                                                                                                 |
+| Mutación desde un origen no permitido                                               | `403 forbidden` (defensa CSRF) y log con motivo `cross_site_mutation`                                                                                                                     |
+
+Nunca se responde `Access-Control-Allow-Origin: *`. Las cookies de sesión siguen siendo `SameSite=Lax`, así que un origen de otro sitio no recibe la sesión aunque esté en la allowlist. El CORS del bucket de las URLs firmadas se configura en el proveedor de almacenamiento, no en la app.
+
+## Protección contra inyección SQL
+
+Ninguna consulta se arma concatenando strings. Todo el acceso a datos pasa por Drizzle ORM:
+
+- El query builder (`select`, `insert`, `update`, `eq`, `and`, `notInArray`…) envía cada valor como parámetro `$n` del protocolo extendido de PostgreSQL (`postgres` con `prepare: true`).
+- La etiqueta `` sql`...${valor}` `` también convierte cada `${valor}` en parámetro. Solo interpola columnas del esquema y valores, nunca texto SQL.
+
+### Inventario de SQL escrito a mano
+
+| Archivo                           | Consulta                                                                                       | ¿Qué se parametriza?                      |
+| --------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `repositories/db.ts`              | `select set_config('app.user_id', ${userId}, true), set_config('app.mode', ${mode}, true)`     | `userId` y `mode` como `$1` y `$2`        |
+| `repositories/users.ts`           | `failed_login_count + 1`, `lockout_level + 1`, `now() + make_interval(secs => ${lockSeconds})` | `lockSeconds`; el resto son columnas      |
+| `repositories/sessions.ts`        | `expires_at > now()`, `revoked_at = now()`                                                     | Sin valores externos                      |
+| `repositories/notifications.ts`   | `read_at = now()`                                                                              | Sin valores externos                      |
+| `repositories/shipments.ts`       | `coalesce(public_id, ${publicId})`                                                             | `publicId` (ULID generado en el servidor) |
+| `packages/database/src/index.ts`  | `select 1` (health check)                                                                      | Sin valores                               |
+| `packages/database/src/schema.ts` | `CHECK` y políticas RLS                                                                        | DDL de migración; sin datos de peticiones |
+
+**Único `sql.raw`:** `shipmentVisible` en `schema.ts` arma la subconsulta de visibilidad de las políticas RLS. Solo acepta el tipo literal cerrado `"shipment_events.shipment_id" | "shipment_audit_events.shipment_id"`, así que TypeScript impide que le llegue un dato de una petición. Solo se usa al generar migraciones.
+
+### Controles automáticos
+
+| Control                       | ¿Qué hace?                                                                                                                                                                                                                                                            | ¿Dónde vive?                                                           |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| ESLint `no-restricted-syntax` | Falla el lint con `sql.raw(...)`, cualquier `.unsafe(...)` y `execute()`/`query()` que reciban un string, un template literal sin etiqueta o una concatenación. La excepción de `schema.ts` lleva un `eslint-disable` justificado                                     | `packages/config/eslint.sql.mjs`, aplicado en la app y en los paquetes |
+| Prueba de parametrización     | Ejecuta los repositorios reales contra Drizzle sin conexión con cargas como `' OR 1=1 --` y `'; DROP TABLE users; --`, y verifica que la carga no aparezca en el texto SQL y sí en los parámetros `$n`. Cubre correo, id, guía, `publicId`, `coalesce` y `set_config` | `apps/rutasegura/src/server/repositories/sql-injection.test.ts`        |
+| Validación de entrada         | Contratos Zod en cada endpoint; ULID, correo y guía se validan antes de llegar a la base                                                                                                                                                                              | `packages/contracts`                                                   |
+
+## Logging de seguridad
+
+Todos los eventos salen por [`logger.ts`](../apps/rutasegura/src/server/logger.ts) como JSON de una línea, con nivel `warn`, a `stderr`.
+
+| Evento                   | ¿Cuándo?                                                                                               | Campos                                         | ¿Dónde se emite?                |
+| ------------------------ | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------- | ------------------------------- |
+| `security.auth_failure`  | Cada 401 de una ruta protegida o de `refresh`                                                          | `route`, `method`, `reason`, `ipHash`          | `requireUser()`, `auth/refresh` |
+| `security.access_denied` | 404 por recurso ajeno o inexistente (`ownership`)                                                      | `route`, `method`, `reason`, `ipHash`          | `withErrorHandling()`           |
+| `security.access_denied` | 403 por mutación cross-site o preflight CORS rechazado                                                 | `source: "proxy"`, `route`, `method`, `reason` | `proxy.ts`                      |
+| `security.auth_event`    | `login_failure`, `login_locked`, `account_locked`, `refresh_reuse`, `rate_limited`, `tracking_failure` | `type`, `userId` (id interno o `null`)         | `recordAuthEvent()`             |
+
+Motivos de `security.auth_failure`: `missing_token`, `invalid_token` (firma, emisor o vencimiento), `session_inactive` (logout o sesión revocada), `user_not_found` y `refresh_invalid`. Motivos de `security.access_denied`: `ownership`, `cross_site_mutation` y `cors_origin_rejected`.
+
+El motivo solo va al log. Al cliente se le responde siempre el mismo `401 unauthorized`, `403 forbidden` o `404 not_found`, para no crear un oráculo. Los eventos de `security.auth_event` se siguen guardando también en la tabla `auth_events`.
+
+**Nunca se registran:** contraseñas, tokens JWT o de refresh, cookies, cabecera `Authorization`, correo, teléfono, número de guía, nombre, dirección, IP en claro, cuerpos de petición ni mensajes de error crudos (`errorKind()` los reduce a su nombre). La IP va como HMAC-SHA256 con `HMAC_SECRET` y el propósito `log-ip`: sirve para correlacionar intentos de una misma fuente sin guardar la IP. El proxy no tiene acceso a los secretos, así que sus eventos no llevan IP.
+
+Como segunda barrera, `logger.ts` sustituye por `[redacted]` cualquier campo, también anidado, cuya clave coincida con `password`, `token`, `cookie`, `authorization`, `secret`, `email`, `phone`, `tracking`, `guia`, `name`, `recipient`, `address` o `ip`. Lo verifican `logger.test.ts`, `require-user.test.ts`, `guards.test.ts`, `auth-events.test.ts` y `proxy.test.ts`.
+
+## Pendiente hasta el frontend (S10)
+
+La parte de backend queda cerrada. Estos criterios dependen de la UI real y se cierran cuando S10 esté lista:
+
+| Pendiente                             | ¿Qué hay que hacer?                                                                                                                                                                                                                                                                                                  | Criterio que cierra                          |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| Validar la CSP contra la app real     | Navegar el portal y la UI pública en Chromium y WebKit con la consola abierta, confirmar que no hay violaciones de CSP en scripts, estilos, imágenes ni fuentes, y ajustar `buildDocumentPolicy` si hace falta, sin reintroducir `unsafe-*` ni orígenes externos                                                     | CSP verificable en headers sin romper la app |
+| Mitigación de XSS (encoding + CSP)    | Revisar que las vistas rendericen datos con el escape por defecto de React (sin `dangerouslySetInnerHTML`, ya prohibido por ESLint con `react/no-danger`), y probar cargas XSS en los campos que se muestran (nombre, ciudad, avisos) para confirmar que la CSP bloquea cualquier script inyectado como segunda capa | Protección XSS con encoding + CSP            |
+| Verificación de CORS de punta a punta | Confirmar que las llamadas reales del frontend funcionan con la allowlist y que las URLs firmadas del bucket cargan con el CORS del proveedor y con `img-src` / `connect-src` de la CSP. Si el bucket vive en otro origen, hay que añadirlo explícitamente a la CSP                                                  | CORS allowlist probada con la UI             |
 
 ## Configuración y secretos
 
@@ -186,6 +289,20 @@ En desarrollo, y solo ahí, la CSP añade `'unsafe-eval'` en scripts y `'unsafe-
 ```bash
 curl -sI https://<dominio>/            # CSP con nonce, COOP, COEP, CORP, HSTS
 curl -si https://<dominio>/api/v1/health
+curl -sI http://localhost:3000/ | grep -i strict-transport-security   # HSTS también por HTTP
+
+# Preflight CORS permitido (204 con Access-Control-Allow-Origin exacto)
+curl -si -X OPTIONS http://localhost:3000/api/v1/shipments \
+  -H "Origin: http://localhost:3000" -H "Access-Control-Request-Method: POST"
+# Preflight CORS rechazado (403 y log security.access_denied)
+curl -si -X OPTIONS http://localhost:3000/api/v1/shipments \
+  -H "Origin: https://atacante.example" -H "Access-Control-Request-Method: POST"
+
+# Log de auth failure: 401 y línea security.auth_failure con reason=missing_token
+curl -si http://localhost:3000/api/v1/auth/me
+docker compose logs rutasegura | grep security.
+
+pnpm lint                              # Incluye la regla contra sql.raw y SQL en strings
 pnpm test                              # CSP, proxy, entorno, health check, auth y rate limit
 pnpm test:e2e                          # Chromium, WebKit y WebKit iPhone
 pnpm test:smoke                        # Autenticación, rastreo, agenda y avisos (IDOR) contra Docker

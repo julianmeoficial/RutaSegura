@@ -1,5 +1,5 @@
 import { claimRequestSchema } from "@rutasegura/contracts";
-import { authenticate } from "@/server/auth/require-user";
+import { requireUser } from "@/server/auth/require-user";
 import { clientIp, readJson, userAgent } from "@/server/http/client";
 import { guardRateLimit, withErrorHandling } from "@/server/http/guards";
 import { apiError, apiJson } from "@/server/http/responses";
@@ -13,8 +13,8 @@ export const dynamic = "force-dynamic";
  * reclamo es otra forma de probar dígitos contra una guía.
  */
 export const POST = withErrorHandling("shipments.claim", async (request) => {
-  const user = await authenticate(request);
-  if (!user) return apiError("unauthorized");
+  const user = await requireUser(request, "shipments.claim");
+  if (user instanceof Response) return user;
 
   const ctx = { ip: clientIp(request), userAgent: userAgent(request) };
   const parsed = claimRequestSchema.safeParse(await readJson(request));

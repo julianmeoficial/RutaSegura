@@ -1,5 +1,6 @@
 import "server-only";
 import { recordAuthEvent, type AuthEventInput } from "@/server/audit/auth-events";
+import { logAccessDenied } from "@/server/audit/security-log";
 import { OwnershipError } from "@/server/authorization/ownership";
 import { errorKind, logger } from "@/server/logger";
 import { rateLimitHeaders, type RateLimitRule } from "@/server/rate-limit/limiter";
@@ -34,7 +35,8 @@ export async function guardRateLimit(
 
 /**
  * Convierte cualquier excepción no prevista en un 500 genérico y registrado.
- * Un `OwnershipError` que llegue hasta aquí responde `404 not_found`.
+ * Un `OwnershipError` que llegue hasta aquí responde `404 not_found` y queda
+ * en el log de seguridad como acceso denegado.
  */
 export function withErrorHandling<C = unknown>(
   route: string,
@@ -44,7 +46,10 @@ export function withErrorHandling<C = unknown>(
     try {
       return await handler(request, context);
     } catch (error) {
-      if (error instanceof OwnershipError) return apiError("not_found");
+      if (error instanceof OwnershipError) {
+        logAccessDenied(request, route, "ownership");
+        return apiError("not_found");
+      }
       logger.error("api.unhandled_error", { route, kind: errorKind(error) });
       return apiError("internal_error");
     }

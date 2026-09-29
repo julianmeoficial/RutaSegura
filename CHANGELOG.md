@@ -40,8 +40,19 @@ Todos los cambios relevantes de RutaSegura se registran aquí. El formato sigue 
   - `DELETE /api/v1/shipments/{id}/schedule`: deja el envío sin franja; idempotente, `400 invalid_schedule` si ya está en reparto o entregado y `404 not_found` si es ajeno o no existe.
   - Migración `0003`: evento de bitácora `unscheduled` y tipo de aviso `shipment_unscheduled`.
   - Casos smoke: sin sesión 401; Bob recibe 404 al cancelar la agenda de Alice y la franja queda intacta; cancelación idempotente, bitácora y aviso genérico.
+- Hardening transversal OWASP, parte de backend (A02, A03, A05 y A09):
+  - CORS con allowlist de orígenes exactos (`CORS_ALLOWED_ORIGINS`), validada al arrancar: sin `*`, sin rutas y solo `https` en producción. Preflight 204 para orígenes permitidos y 403 para el resto, con `Vary: Origin` y sin cabeceras CORS para orígenes no listados.
+  - Log de seguridad: `security.auth_failure` en cada 401 con su motivo, `security.access_denied` en los 403 del proxy y en los 404 por ownership, y `security.auth_event` para fallos de login, bloqueos, reutilización de refresh, rate limit y rastreo fallido. La IP va solo como HMAC.
+  - Redacción defensiva en `logger.ts`: claves como `password`, `token`, `cookie`, `email`, `phone` o `tracking` salen como `[redacted]`.
+  - `requireUser()` sustituye el patrón `authenticate` + 401 en las rutas protegidas.
+  - Regla ESLint `no-restricted-syntax` contra `sql.raw`, `unsafe()` y SQL como string o concatenación en `execute()` y `query()`.
+  - Prueba `sql-injection.test.ts`: ejecuta los repositorios reales con cargas de inyección y verifica que viajen como parámetros `$n`.
 
 ### Cambiado
+
+- HSTS (`max-age=63072000; includeSubDomains; preload`) se emite en todas las respuestas, incluidos los 403 del proxy y los estáticos de `/_next`, y no solo sobre HTTPS. El navegador lo ignora si llega por HTTP.
+- Las mutaciones de la API desde un origen de la allowlist CORS ya no se rechazan como CSRF.
+- `shipmentVisible` en `schema.ts` acepta solo un tipo literal cerrado; el SQL generado no cambia.
 
 - `SESSION_TTL_SECONDS` pasa a ser la vida de la sesión de refresh (8 h por defecto); nuevas variables `ACCESS_TOKEN_TTL_SECONDS`, `LOCKOUT_*`, `LOGIN_RATE_LIMIT_*` y `REGISTER_RATE_LIMIT_*`.
 - El README se reduce a la descripción, el arranque rápido y los scripts; el resto se mueve a `docs/`.

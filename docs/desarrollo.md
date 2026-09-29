@@ -43,6 +43,16 @@ pnpm dev
 
 Next lee el mismo `.env` de la raíz (lo carga `next.config.ts`), y drizzle-kit y la semilla también (`packages/database/src/load-env.ts`). Así hay un único archivo de entorno para Compose, `pnpm dev` y las migraciones.
 
+### CORS
+
+La API solo acepta peticiones CORS de los orígenes de `CORS_ALLOWED_ORIGINS`, además del origen de `NEXT_PUBLIC_APP_URL`, que siempre está permitido. Por defecto la variable está vacía: solo el mismo origen. Si levantas un cliente en otro puerto, añade su origen exacto:
+
+```bash
+CORS_ALLOWED_ORIGINS=http://localhost:5173
+```
+
+Se rechazan `*`, rutas y query. Con `APP_ENV=production` solo se admite `https`. Si la lista no es válida, la app no arranca. Detalle en [seguridad.md](seguridad.md#cors).
+
 ## Base de datos
 
 El esquema vive en [`packages/database/src/schema.ts`](../packages/database/src/schema.ts) y las migraciones SQL generadas en `packages/database/drizzle/`. Para cambiar el esquema:

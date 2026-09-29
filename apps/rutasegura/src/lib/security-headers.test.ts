@@ -54,4 +54,9 @@ describe("staticSecurityHeaders", () => {
       ]),
     );
   });
+
+  it("incluye HSTS con preload para los recursos estáticos", () => {
+    const hsts = staticSecurityHeaders.find((header) => header.key === "Strict-Transport-Security");
+    expect(hsts?.value).toBe("max-age=63072000; includeSubDomains; preload");
+  });
 });

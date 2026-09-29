@@ -1,15 +1,15 @@
-import { authenticate } from "@/server/auth/require-user";
+import { requireUser } from "@/server/auth/require-user";
 import { clientIp, userAgent } from "@/server/http/client";
 import { guardRateLimit, withErrorHandling } from "@/server/http/guards";
-import { apiError, apiJson } from "@/server/http/responses";
+import { apiJson } from "@/server/http/responses";
 import { shipmentsRules } from "@/server/rate-limit/policies";
 import { listShipmentsForUser } from "@/server/services/shipments";
 
 export const dynamic = "force-dynamic";
 
 export const GET = withErrorHandling("shipments.list", async (request) => {
-  const user = await authenticate(request);
-  if (!user) return apiError("unauthorized");
+  const user = await requireUser(request, "shipments.list");
+  if (user instanceof Response) return user;
 
   const limit = await guardRateLimit(shipmentsRules(user.id), {
     userId: user.id,

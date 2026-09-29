@@ -164,8 +164,15 @@ export const shipments = pgTable(
   ],
 );
 
+/**
+ * Columnas que referencian un envío desde otra tabla. `sql.raw` solo recibe
+ * estos literales fijos, así que ningún dato de una petición llega al SQL.
+ */
+type ShipmentReferenceColumn = "shipment_events.shipment_id" | "shipment_audit_events.shipment_id";
+
 /** Visible solo si el envío lo es: la subconsulta aplica la RLS de `shipments`. */
-const shipmentVisible = (column: string) =>
+const shipmentVisible = (column: ShipmentReferenceColumn) =>
+  // eslint-disable-next-line no-restricted-syntax -- identificador de un tipo literal cerrado, sin entrada externa.
   sql.raw(`exists (select 1 from shipments s where s.id = ${column})`);
 
 export const shipmentEvents = pgTable(

@@ -16,12 +16,27 @@ export type AuthEventInput = {
   userAgent?: string | null;
 };
 
+/** Eventos que además se emiten al log de seguridad, para alertas sin consultar la base. */
+const FAILURE_EVENTS: ReadonlySet<AuthEventType> = new Set([
+  "login_failure",
+  "login_locked",
+  "account_locked",
+  "refresh_reuse",
+  "rate_limited",
+  "tracking_failure",
+]);
+
 /**
  * Registra un evento de autenticación. Un fallo al escribir la bitácora se
  * registra en el log, pero no tumba el login del usuario.
  */
 export async function recordAuthEvent(event: AuthEventInput): Promise<void> {
   const { HMAC_SECRET } = getEnv();
+
+  if (FAILURE_EVENTS.has(event.type)) {
+    logger.warn("security.auth_event", { type: event.type, userId: event.userId ?? null });
+  }
+
   try {
     await db()
       .insert(schema.authEvents)

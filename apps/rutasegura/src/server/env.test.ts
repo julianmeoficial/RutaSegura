@@ -62,6 +62,40 @@ describe("parseEnv", () => {
     );
   });
 
+  it("acepta una allowlist CORS de orígenes exactos", () => {
+    const env = parseEnv({
+      ...validLocal,
+      CORS_ALLOWED_ORIGINS: "http://localhost:5173, https://portal.rutasegura.example.org",
+    });
+    expect(env.CORS_ALLOWED_ORIGINS).toContain("localhost:5173");
+  });
+
+  it("rechaza comodines y rutas en la allowlist CORS sin revelar el valor", () => {
+    expect(() => parseEnv({ ...validLocal, CORS_ALLOWED_ORIGINS: "*" })).toThrow(
+      /CORS_ALLOWED_ORIGINS/,
+    );
+    expect(() =>
+      parseEnv({ ...validLocal, CORS_ALLOWED_ORIGINS: "https://secreto.example.org/api" }),
+    ).not.toThrow(/secreto/);
+    expect(() =>
+      parseEnv({ ...validLocal, CORS_ALLOWED_ORIGINS: "https://secreto.example.org/api" }),
+    ).toThrow(/CORS_ALLOWED_ORIGINS/);
+  });
+
+  it("en producción exige https en la allowlist CORS", () => {
+    expect(() =>
+      parseEnv({
+        ...validLocal,
+        APP_ENV: "production",
+        NEXT_PUBLIC_APP_URL: "https://rutasegura.example.org",
+        SESSION_SECRET: strongSecret,
+        CSRF_SECRET: strongSecret,
+        HMAC_SECRET: strongSecret,
+        CORS_ALLOWED_ORIGINS: "http://portal.example.org",
+      }),
+    ).toThrow(/CORS_ALLOWED_ORIGINS/);
+  });
+
   it("limita la vigencia de las URLs firmadas", () => {
     expect(() => parseEnv({ ...validLocal, SIGNED_URL_TTL_SECONDS: "3600" })).toThrow(
       /SIGNED_URL_TTL_SECONDS/,

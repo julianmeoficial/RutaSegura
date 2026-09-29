@@ -7,7 +7,14 @@
 
 type Header = { key: string; value: string };
 
+/**
+ * Se emite en toda respuesta, también sobre HTTP: el navegador ignora HSTS
+ * recibido por HTTP (RFC 6797 §8.1), así que no afecta a http://localhost.
+ */
+export const STRICT_TRANSPORT_SECURITY = "max-age=63072000; includeSubDomains; preload";
+
 export const staticSecurityHeaders: Header[] = [
+  { key: "Strict-Transport-Security", value: STRICT_TRANSPORT_SECURITY },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -22,8 +29,6 @@ export const staticSecurityHeaders: Header[] = [
   { key: "Origin-Agent-Cluster", value: "?1" },
   { key: "X-DNS-Prefetch-Control", value: "off" },
 ];
-
-export const STRICT_TRANSPORT_SECURITY = "max-age=63072000; includeSubDomains; preload";
 
 /** Las respuestas JSON nunca se interpretan como documento. */
 export const API_CONTENT_SECURITY_POLICY =

@@ -9,13 +9,35 @@ function threshold(): number {
   return LEVELS[configured ?? "info"] ?? LEVELS.info;
 }
 
+export const REDACTED = "[redacted]";
+
+const SENSITIVE_KEY =
+  /pass(word)?|token|cookie|authori[sz]ation|secret|e-?mail|phone|tel[eé]fono|tracking|gu[ií]a|^name$|nombre|recipient|address|direcci[oó]n|^ip$/i;
+
+/** Segunda barrera: aunque un llamador pase un campo sensible, no llega al log. */
+export function redact(value: unknown, depth = 0): unknown {
+  if (depth > 4 || value === null || typeof value !== "object") return value;
+  if (Array.isArray(value)) return value.map((item) => redact(item, depth + 1));
+  return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => [
+      key,
+      SENSITIVE_KEY.test(key) ? REDACTED : redact(item, depth + 1),
+    ]),
+  );
+}
+
 /**
  * Logger estructurado en JSON. Los campos deben ser metadatos
  * (evento, dependencia, código): nunca secretos, tokens ni datos personales.
  */
 function write(level: Level, event: string, fields: Record<string, unknown> = {}) {
   if (LEVELS[level] < threshold()) return;
-  const line = JSON.stringify({ time: new Date().toISOString(), level, event, ...fields });
+  const line = JSON.stringify({
+    time: new Date().toISOString(),
+    level,
+    event,
+    ...(redact(fields) as Record<string, unknown>),
+  });
   if (level === "error" || level === "warn") {
     console.error(line);
   } else {

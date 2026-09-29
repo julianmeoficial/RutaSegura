@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { parseAllowedOrigins } from "@/lib/cors";
 
 const PLACEHOLDER_PATTERN = /replace|change_me|example/i;
 
@@ -11,6 +12,8 @@ const envSchema = z
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
     APP_ENV: z.enum(["development", "preview", "production"]).default("development"),
     NEXT_PUBLIC_APP_URL: z.url(),
+    /** Orígenes extra con acceso CORS a la API, separados por comas. */
+    CORS_ALLOWED_ORIGINS: z.string().optional(),
 
     DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
     REDIS_URL: z.url({ protocol: /^rediss?$/ }),
@@ -47,6 +50,18 @@ const envSchema = z
     LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
   })
   .superRefine((env, ctx) => {
+    try {
+      parseAllowedOrigins(env.CORS_ALLOWED_ORIGINS, env.NEXT_PUBLIC_APP_URL, {
+        requireHttps: env.APP_ENV === "production",
+      });
+    } catch (error) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["CORS_ALLOWED_ORIGINS"],
+        message: error instanceof Error ? error.message : "inválida",
+      });
+    }
+
     if (env.APP_ENV !== "production") return;
 
     for (const key of ["SESSION_SECRET", "CSRF_SECRET", "HMAC_SECRET"] as const) {

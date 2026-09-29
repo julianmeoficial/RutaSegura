@@ -1,3 +1,4 @@
+import { logAuthFailure } from "@/server/audit/security-log";
 import {
   clearSessionCookies,
   cookieNames,
@@ -21,6 +22,7 @@ export const POST = withErrorHandling("auth.refresh", async (request) => {
     : ({ ok: false } as const);
 
   if (!result.ok) {
+    logAuthFailure(request, "auth.refresh", token ? "refresh_invalid" : "missing_token");
     const headers = new Headers();
     clearSessionCookies(headers, isHttps);
     return apiError("unauthorized", { headers });

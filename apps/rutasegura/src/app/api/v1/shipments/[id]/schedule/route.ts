@@ -1,5 +1,5 @@
 import { scheduleRequestSchema, ulidSchema } from "@rutasegura/contracts";
-import { authenticate } from "@/server/auth/require-user";
+import { requireUser } from "@/server/auth/require-user";
 import { clientIp, readJson, userAgent } from "@/server/http/client";
 import { guardRateLimit, withErrorHandling } from "@/server/http/guards";
 import { apiError, apiJson } from "@/server/http/responses";
@@ -13,8 +13,8 @@ type Context = { params: Promise<{ id: string }> };
 export const PATCH = withErrorHandling<Context>(
   "shipments.schedule",
   async (request, { params }) => {
-    const user = await authenticate(request);
-    if (!user) return apiError("unauthorized");
+    const user = await requireUser(request, "shipments.schedule");
+    if (user instanceof Response) return user;
 
     const limit = await guardRateLimit(shipmentsRules(user.id), {
       userId: user.id,
@@ -39,8 +39,8 @@ export const PATCH = withErrorHandling<Context>(
 export const DELETE = withErrorHandling<Context>(
   "shipments.unschedule",
   async (request, { params }) => {
-    const user = await authenticate(request);
-    if (!user) return apiError("unauthorized");
+    const user = await requireUser(request, "shipments.unschedule");
+    if (user instanceof Response) return user;
 
     const limit = await guardRateLimit(shipmentsRules(user.id), {
       userId: user.id,

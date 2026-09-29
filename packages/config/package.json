@@ -6,6 +6,7 @@
   "exports": {
     "./tsconfig.base.json": "./tsconfig.base.json",
     "./eslint": "./eslint.base.mjs",
+    "./eslint-sql": "./eslint.sql.mjs",
     "./prettier": "./prettier.config.mjs"
   },
   "dependencies": {

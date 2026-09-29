@@ -1,5 +1,5 @@
 import { ulidSchema } from "@rutasegura/contracts";
-import { authenticate } from "@/server/auth/require-user";
+import { requireUser } from "@/server/auth/require-user";
 import { clientIp, userAgent } from "@/server/http/client";
 import { guardRateLimit, withErrorHandling } from "@/server/http/guards";
 import { apiError, apiJson } from "@/server/http/responses";
@@ -11,8 +11,8 @@ export const dynamic = "force-dynamic";
 type Context = { params: Promise<{ id: string }> };
 
 export const GET = withErrorHandling<Context>("shipments.get", async (request, { params }) => {
-  const user = await authenticate(request);
-  if (!user) return apiError("unauthorized");
+  const user = await requireUser(request, "shipments.get");
+  if (user instanceof Response) return user;
 
   const limit = await guardRateLimit(shipmentsRules(user.id), {
     userId: user.id,

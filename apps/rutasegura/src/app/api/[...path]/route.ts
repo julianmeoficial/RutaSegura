@@ -10,3 +10,5 @@ export const POST = notFound;
 export const PUT = notFound;
 export const PATCH = notFound;
 export const DELETE = notFound;
+// Los preflight CORS los responde proxy.ts; un OPTIONS que llegue aquí no tiene ruta.
+export const OPTIONS = notFound;

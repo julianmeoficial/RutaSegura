@@ -7,6 +7,14 @@ const PLACEHOLDER_PATTERN = /replace|change_me|example/i;
 const secret = z.string().min(32, "debe tener al menos 32 caracteres");
 const positiveInt = z.coerce.number().int().positive();
 
+const STORAGE_KEYS = [
+  "STORAGE_ENDPOINT",
+  "STORAGE_REGION",
+  "STORAGE_BUCKET",
+  "STORAGE_ACCESS_KEY_ID",
+  "STORAGE_SECRET_ACCESS_KEY",
+] as const;
+
 const envSchema = z
   .object({
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -40,12 +48,16 @@ const envSchema = z
     NOTIFICATIONS_RATE_LIMIT_MAX: positiveInt.default(60),
     NOTIFICATIONS_RATE_LIMIT_WINDOW_SECONDS: positiveInt.default(60),
 
-    STORAGE_ENDPOINT: z.url().optional(),
-    STORAGE_REGION: z.string().optional(),
-    STORAGE_BUCKET: z.string().optional(),
-    STORAGE_ACCESS_KEY_ID: z.string().optional(),
-    STORAGE_SECRET_ACCESS_KEY: z.string().optional(),
+    STORAGE_ENDPOINT: z.url({ protocol: /^https?$/ }).optional(),
+    /** Host con el que se firman las URLs: el que abre el navegador. */
+    STORAGE_PUBLIC_ENDPOINT: z.url({ protocol: /^https?$/ }).optional(),
+    STORAGE_REGION: z.string().min(1).optional(),
+    STORAGE_BUCKET: z.string().min(1).optional(),
+    STORAGE_ACCESS_KEY_ID: z.string().min(1).optional(),
+    STORAGE_SECRET_ACCESS_KEY: z.string().min(1).optional(),
     SIGNED_URL_TTL_SECONDS: positiveInt.max(300).default(60),
+    DOCUMENTS_RATE_LIMIT_MAX: positiveInt.default(30),
+    DOCUMENTS_RATE_LIMIT_WINDOW_SECONDS: positiveInt.default(60),
 
     LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
   })
@@ -73,6 +85,23 @@ const envSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["NEXT_PUBLIC_APP_URL"],
+        message: "debe usar https en producción",
+      });
+    }
+
+    for (const key of STORAGE_KEYS) {
+      const value = env[key];
+      if (!value) {
+        ctx.addIssue({ code: "custom", path: [key], message: "es obligatoria en producción" });
+      } else if (PLACEHOLDER_PATTERN.test(value)) {
+        ctx.addIssue({ code: "custom", path: [key], message: "usa un valor de ejemplo" });
+      }
+    }
+    const publicEndpoint = env.STORAGE_PUBLIC_ENDPOINT ?? env.STORAGE_ENDPOINT;
+    if (publicEndpoint && !publicEndpoint.startsWith("https://")) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["STORAGE_PUBLIC_ENDPOINT"],
         message: "debe usar https en producción",
       });
     }

@@ -68,6 +68,8 @@ Ruta: [`packages/config`](../packages/config). Configuración compartida.
 | ioredis         | 6.0                  | Cliente de Redis                                                |
 | @node-rs/argon2 | 2.2                  | Argon2id con binarios precompilados, sin scripts de instalación |
 | jose            | 6.2                  | Firma y verificación de JWT                                     |
+| AWS SDK S3      | 3.1150               | `client-s3` y `s3-request-presigner`: URLs firmadas SigV4       |
+| MinIO           | Digest de Chainguard | Almacenamiento S3 local; Docker Hub ya no publica la imagen     |
 | tsx             | 4.23                 | Ejecuta la semilla de base de datos (desarrollo)                |
 | Vitest          | 5.0                  | Pruebas unitarias                                               |
 | Playwright      | 1.63                 | Pruebas en Chromium y WebKit                                    |

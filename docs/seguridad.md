@@ -78,6 +78,21 @@ El control que cuenta en la API es `assertOwnership`; la RLS evita que un error 
 
 `shipment_audit_events` y `notifications` se conservan 365 días. En este sprint no hay tarea de purga; queda pendiente para el hardening.
 
+## Documentos y almacenamiento
+
+Desde el Sprint 3 los soportes de los envíos viven en un bucket privado (OWASP A05) y solo se descargan con una URL firmada de 60 s que la app emite al dueño (A01). Detalle y evidencia reproducible en [documentos.md](documentos.md).
+
+| Capa          | Control                                                                                                         | ¿Dónde vive?                    |
+| ------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| Bucket        | Sin política anónima: GET y listados sin firma responden 403                                                    | `scripts/minio-init.sh`         |
+| Credenciales  | La app firma con una cuenta `readonly`; la root solo la usan los contenedores                                   | `compose.yaml`, `minio-init.sh` |
+| Autorización  | `assertOwnership` antes de firmar; ajeno, inexistente o mal formado: el mismo 404                               | `services/documents.ts`         |
+| Firma         | SigV4 con TTL de 60 s (máximo 300), `attachment` y `no-store` firmados; la API nunca expone la clave del objeto | `server/storage/signer.ts`      |
+| Configuración | En producción el almacenamiento es obligatorio, sin valores de ejemplo y con endpoint HTTPS                     | `env.ts`                        |
+| Bitácora      | `document_url_issued` por cada emisión, con actor; la URL nunca se registra                                     | `services/documents.ts`         |
+| Rate limit    | 30 emisiones o listados por usuario por minuto                                                                  | `rate-limit/policies.ts`        |
+| RLS           | `documents_select` hereda la visibilidad del envío                                                              | migración `0004_documents.sql`  |
+
 ## Recorrido de una petición
 
 [`proxy.ts`](../apps/rutasegura/src/proxy.ts) se ejecuta en toda petición salvo los recursos estáticos de `_next` y las precargas de navegación.
@@ -216,28 +231,32 @@ Ninguna consulta se arma concatenando strings. Todo el acceso a datos pasa por D
 | `packages/database/src/index.ts`  | `select 1` (health check)                                                                      | Sin valores                               |
 | `packages/database/src/schema.ts` | `CHECK` y políticas RLS                                                                        | DDL de migración; sin datos de peticiones |
 
-**Único `sql.raw`:** `shipmentVisible` en `schema.ts` arma la subconsulta de visibilidad de las políticas RLS. Solo acepta el tipo literal cerrado `"shipment_events.shipment_id" | "shipment_audit_events.shipment_id"`, así que TypeScript impide que le llegue un dato de una petición. Solo se usa al generar migraciones.
+**Único `sql.raw`:** `shipmentVisible` en `schema.ts` arma la subconsulta de visibilidad de las políticas RLS. Solo acepta el tipo literal cerrado `"shipment_events.shipment_id" | "shipment_audit_events.shipment_id" | "documents.shipment_id"`, así que TypeScript impide que le llegue un dato de una petición. Solo se usa al generar migraciones.
 
 ### Controles automáticos
 
-| Control                       | ¿Qué hace?                                                                                                                                                                                                                                                            | ¿Dónde vive?                                                           |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| ESLint `no-restricted-syntax` | Falla el lint con `sql.raw(...)`, cualquier `.unsafe(...)` y `execute()`/`query()` que reciban un string, un template literal sin etiqueta o una concatenación. La excepción de `schema.ts` lleva un `eslint-disable` justificado                                     | `packages/config/eslint.sql.mjs`, aplicado en la app y en los paquetes |
-| Prueba de parametrización     | Ejecuta los repositorios reales contra Drizzle sin conexión con cargas como `' OR 1=1 --` y `'; DROP TABLE users; --`, y verifica que la carga no aparezca en el texto SQL y sí en los parámetros `$n`. Cubre correo, id, guía, `publicId`, `coalesce` y `set_config` | `apps/rutasegura/src/server/repositories/sql-injection.test.ts`        |
-| Validación de entrada         | Contratos Zod en cada endpoint; ULID, correo y guía se validan antes de llegar a la base                                                                                                                                                                              | `packages/contracts`                                                   |
+| Control                       | ¿Qué hace?                                                                                                                                                                                                                                                                                                    | ¿Dónde vive?                                                           |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| ESLint `no-restricted-syntax` | Falla el lint con `sql.raw(...)`, cualquier `.unsafe(...)` y `execute()`/`query()` que reciban un string, un template literal sin etiqueta o una concatenación. La excepción de `schema.ts` lleva un `eslint-disable` justificado                                                                             | `packages/config/eslint.sql.mjs`, aplicado en la app y en los paquetes |
+| Prueba de parametrización     | Ejecuta los repositorios reales contra Drizzle sin conexión con cargas como `' OR 1=1 --` y `'; DROP TABLE users; --`, y verifica que la carga no aparezca en el texto SQL y sí en los parámetros `$n`. Cubre correo, id, guía, `publicId`, documentos (`publicId`, envío y dueño), `coalesce` y `set_config` | `apps/rutasegura/src/server/repositories/sql-injection.test.ts`        |
+| Validación de entrada         | Contratos Zod en cada endpoint; ULID, correo y guía se validan antes de llegar a la base                                                                                                                                                                                                                      | `packages/contracts`                                                   |
 
 ## Logging de seguridad
 
 Todos los eventos salen por [`logger.ts`](../apps/rutasegura/src/server/logger.ts) como JSON de una línea, con nivel `warn`, a `stderr`.
 
-| Evento                   | ¿Cuándo?                                                                                               | Campos                                         | ¿Dónde se emite?                |
-| ------------------------ | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------- | ------------------------------- |
-| `security.auth_failure`  | Cada 401 de una ruta protegida o de `refresh`                                                          | `route`, `method`, `reason`, `ipHash`          | `requireUser()`, `auth/refresh` |
-| `security.access_denied` | 404 por recurso ajeno o inexistente (`ownership`)                                                      | `route`, `method`, `reason`, `ipHash`          | `withErrorHandling()`           |
-| `security.access_denied` | 403 por mutación cross-site o preflight CORS rechazado                                                 | `source: "proxy"`, `route`, `method`, `reason` | `proxy.ts`                      |
-| `security.auth_event`    | `login_failure`, `login_locked`, `account_locked`, `refresh_reuse`, `rate_limited`, `tracking_failure` | `type`, `userId` (id interno o `null`)         | `recordAuthEvent()`             |
+| Evento                   | ¿Cuándo?                                                                                                        | Campos                                                                                              | ¿Dónde se emite?                |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------- |
+| `security.auth_failure`  | Cada 401 de una ruta protegida o de `refresh`                                                                   | `route`, `method`, `reason`, `ipHash`                                                               | `requireUser()`, `auth/refresh` |
+| `security.auth_failure`  | Página del portal con cookie de acceso inválida, vencida o de una sesión revocada (antes de redirigir al login) | `source: "page"`, `route` (sin IDs, p. ej. `page:/portal/envios/:id`), `method`, `reason`, `ipHash` | `requirePortalUser()`           |
+| `security.access_denied` | 404 por recurso ajeno o inexistente (`ownership`)                                                               | `route`, `method`, `reason`, `ipHash`                                                               | `withErrorHandling()`           |
+| `security.access_denied` | 404 de una página del portal por envío ajeno (`ownership`)                                                      | `source: "page"`, `route`, `reason`                                                                 | `loadOwnedShipment()`           |
+| `security.access_denied` | 403 por mutación cross-site o preflight CORS rechazado                                                          | `source: "proxy"`, `route`, `method`, `reason`                                                      | `proxy.ts`                      |
+| `security.auth_event`    | `login_failure`, `login_locked`, `account_locked`, `refresh_reuse`, `rate_limited`, `tracking_failure`          | `type`, `userId` (id interno o `null`)                                                              | `recordAuthEvent()`             |
 
 Motivos de `security.auth_failure`: `missing_token`, `invalid_token` (firma, emisor o vencimiento), `session_inactive` (logout o sesión revocada), `user_not_found` y `refresh_invalid`. Motivos de `security.access_denied`: `ownership`, `cross_site_mutation` y `cors_origin_rejected`.
+
+Una visita al portal sin cookie no se registra: es alguien sin sesión, no un intento fallido.
 
 El motivo solo va al log. Al cliente se le responde siempre el mismo `401 unauthorized`, `403 forbidden` o `404 not_found`, para no crear un oráculo. Los eventos de `security.auth_event` se siguen guardando también en la tabla `auth_events`.
 
@@ -245,15 +264,30 @@ El motivo solo va al log. Al cliente se le responde siempre el mismo `401 unauth
 
 Como segunda barrera, `logger.ts` sustituye por `[redacted]` cualquier campo, también anidado, cuya clave coincida con `password`, `token`, `cookie`, `authorization`, `secret`, `email`, `phone`, `tracking`, `guia`, `name`, `recipient`, `address` o `ip`. Lo verifican `logger.test.ts`, `require-user.test.ts`, `guards.test.ts`, `auth-events.test.ts` y `proxy.test.ts`.
 
-## Pendiente hasta el frontend (S10)
+## Verificación con el frontend (Sprint 3)
 
-La parte de backend queda cerrada. Estos criterios dependen de la UI real y se cierran cuando S10 esté lista:
+Los criterios que dependían de la UI real se cierran con los flujos E2E de [`e2e-flows`](../apps/rutasegura/e2e-flows), que recorren registro, login, reclamo, agenda, descarga firmada, 404 y logout en Chromium y WebKit contra el entorno Docker completo:
 
-| Pendiente                             | ¿Qué hay que hacer?                                                                                                                                                                                                                                                                                                  | Criterio que cierra                          |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| Validar la CSP contra la app real     | Navegar el portal y la UI pública en Chromium y WebKit con la consola abierta, confirmar que no hay violaciones de CSP en scripts, estilos, imágenes ni fuentes, y ajustar `buildDocumentPolicy` si hace falta, sin reintroducir `unsafe-*` ni orígenes externos                                                     | CSP verificable en headers sin romper la app |
-| Mitigación de XSS (encoding + CSP)    | Revisar que las vistas rendericen datos con el escape por defecto de React (sin `dangerouslySetInnerHTML`, ya prohibido por ESLint con `react/no-danger`), y probar cargas XSS en los campos que se muestran (nombre, ciudad, avisos) para confirmar que la CSP bloquea cualquier script inyectado como segunda capa | Protección XSS con encoding + CSP            |
-| Verificación de CORS de punta a punta | Confirmar que las llamadas reales del frontend funcionan con la allowlist y que las URLs firmadas del bucket cargan con el CORS del proveedor y con `img-src` / `connect-src` de la CSP. Si el bucket vive en otro origen, hay que añadirlo explícitamente a la CSP                                                  | CORS allowlist probada con la UI             |
+| Criterio                           | ¿Cómo quedó?                                                                                                                                                                                                                                                      |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CSP contra la app real             | El flujo falla ante cualquier error de consola, violaciones de CSP incluidas. La UI no usa estilos en línea (CSS Modules), la fuente Inter se sirve desde el propio origen con `next/font` y `buildDocumentPolicy` no cambió: sin `unsafe-*` ni orígenes externos |
+| Mitigación de XSS (encoding + CSP) | Sin `dangerouslySetInnerHTML` (`react/no-danger`). El flujo registra un nombre con `<img src=x onerror=…>` y comprueba que se muestra como texto, que no se crea el elemento y que el manejador no se ejecuta                                                     |
+| CORS de punta a punta              | La UI llama a la API en el mismo origen con rutas relativas. La descarga es una navegación de primer nivel a la URL firmada, no un `fetch`: no requiere CORS en el bucket ni ampliar `connect-src` o `img-src`                                                    |
+
+### Después de la integración FE↔BE
+
+El smoke de UI ([smoke-ui.md](smoke-ui.md)) corre contra la **imagen de producción** (`APP_BUILD_TARGET=runner`), no contra `next dev`, cuya CSP añade `unsafe-eval` y `unsafe-inline` para la recarga en caliente. En cada página pública y del portal comprueba:
+
+- CSP con `script-src 'self' 'nonce-…' 'strict-dynamic'`, `style-src 'self' 'nonce-…'`, `frame-ancestors 'none'` y sin ningún `unsafe-*`.
+- HSTS `max-age=63072000; includeSubDomains; preload` y `X-Content-Type-Options: nosniff`.
+- Ningún error de CSP, JavaScript ni hidratación en la consola.
+
+Errores visibles al usuario:
+
+- Todos los textos salen de un solo catálogo, [`error-messages.ts`](../apps/rutasegura/src/lib/error-messages.ts): un mensaje por código de la API (los mismos de `API_ERRORS`) y variantes por pantalla que no revelan si una guía o una cuenta existen. Un código desconocido se muestra como `internal_error`.
+- Los error boundaries (`app/error.tsx`, `app/(portal)/portal/error.tsx` y `app/global-error.tsx`) muestran "Algo salió mal", un botón para reintentar y el `digest` como código de referencia. Nunca muestran `error.message` ni la traza.
+- Las cargas de datos de las páginas pasan por [`pageData()`](../apps/rutasegura/src/server/portal/page-data.ts): `redirect` y `notFound` siguen su curso y cualquier otro fallo se registra como `page.unhandled_error` (`route` y `kind`) y se relanza como `PageDataError` sin detalles. Sin esto, Next imprimía en stderr el error de Drizzle con la consulta y sus parámetros, incluido el ID de sesión (defecto DEF-01 de [smoke-ui.md](smoke-ui.md)).
+- El smoke detiene PostgreSQL y verifica la página genérica, el `500 internal_error` de la API y que el log del contenedor no tenga la consulta, sus parámetros ni `ENOTFOUND`.
 
 ## Configuración y secretos
 
@@ -271,7 +305,7 @@ La parte de backend queda cerrada. Estos criterios dependen de la UI real y se c
 ## Contenedores
 
 - La imagen de producción corre como el usuario `nextjs` (uid 1001), no como root.
-- Compose publica PostgreSQL y Redis solo en `127.0.0.1`, nunca en la red local.
+- Compose publica PostgreSQL, Redis y MinIO solo en `127.0.0.1`, nunca en la red local. La consola web de MinIO está apagada.
 - Las credenciales de `compose.yaml` son locales y de ejemplo; producción usa servicios administrados con secretos propios.
 
 ## Controles pendientes
@@ -281,7 +315,6 @@ La parte de backend queda cerrada. Estos criterios dependen de la UI real y se c
 | TOTP opcional como segundo factor                                       | A07          | 8          |
 | Rol de base de datos no dueño en producción, para que la RLS se aplique | A01          | Despliegue |
 | Purga de `shipment_audit_events` y `notifications` a los 365 días       | A09          | 14 a 17    |
-| Bucket privado y URLs firmadas de corta duración                        | A05          | 10         |
 | Checklist ASVS L1, pentesting y re-test antes/después                   | Todas        | 14 a 17    |
 
 ## Cómo verificarlo
@@ -305,5 +338,8 @@ docker compose logs rutasegura | grep security.
 pnpm lint                              # Incluye la regla contra sql.raw y SQL en strings
 pnpm test                              # CSP, proxy, entorno, health check, auth y rate limit
 pnpm test:e2e                          # Chromium, WebKit y WebKit iPhone
-pnpm test:smoke                        # Autenticación, rastreo, agenda y avisos (IDOR) contra Docker
+pnpm test:smoke                        # Autenticación, rastreo, agenda, avisos y documentos (IDOR) contra Docker
+pnpm test:e2e:flows                    # Flujos de UI en Chromium y WebKit contra Docker
+pnpm test:smoke:ui                     # Los mismos flujos contra la imagen de producción (CSP estricta)
+./scripts/evidence-signed-urls.sh      # Evidencia de bucket privado y vencimiento de la URL firmada
 ```

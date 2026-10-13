@@ -14,9 +14,30 @@ pnpm docker:up
 curl -i http://localhost:3000/api/v1/health
 ```
 
-Compose levanta cuatro servicios: `rutasegura` (la app en modo desarrollo), `postgres` (PostgreSQL 17), `redis` (Redis 7) y `migrate`, que aplica las migraciones y la semilla de datos ficticios y termina. La app espera a que `migrate` termine con éxito y a que Redis esté sano; su propio healthcheck llama a `GET /api/v1/health`. Dentro de Compose, `DATABASE_URL` y `REDIS_URL` apuntan a los servicios `postgres` y `redis` sin editar `.env`.
+Compose levanta seis servicios: `rutasegura` (la app en modo desarrollo), `postgres` (PostgreSQL 17), `redis` (Redis 7), `minio` (almacenamiento S3 compatible), `migrate`, que aplica las migraciones y la semilla de datos ficticios y termina, y `minio-init`, que crea el bucket privado, la cuenta de solo lectura de la app y sube los PDF ficticios, y termina. La app espera a que `migrate` y `minio-init` terminen con éxito y a que Redis esté sano; su propio healthcheck llama a `GET /api/v1/health`. Dentro de Compose, `DATABASE_URL`, `REDIS_URL` y `STORAGE_ENDPOINT` apuntan a los servicios sin editar `.env`.
 
-`pnpm docker:down` detiene todo. Los datos persisten en los volúmenes `postgres_data` y `redis_data`.
+`pnpm docker:down` detiene todo. Los datos persisten en los volúmenes `postgres_data`, `redis_data` y `minio_data`.
+
+### Imagen de la app: desarrollo o producción
+
+`APP_BUILD_TARGET` elige el target del `Dockerfile` para el servicio `rutasegura`:
+
+| Valor                   | Qué levanta                                                                                                             |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `development` (defecto) | `next dev` con recarga en caliente; su CSP añade `unsafe-eval` y `unsafe-inline`                                        |
+| `runner`                | La imagen de producción: build `standalone`, usuario `nextjs` y CSP estricta. Es la que usan los smoke, CI y el pentest |
+
+```bash
+APP_BUILD_TARGET=runner docker compose up -d --build --wait
+```
+
+Los scripts de smoke usan `runner` si no se indica otra cosa. Para volver al modo desarrollo después, `docker compose up -d --build rutasegura` sin la variable.
+
+La interfaz queda en `http://localhost:3000` (redirige a `/rastreo`). Para recorrer el portal: crea una cuenta en `/registro`, entra y vincula `RS0000000001` con los dígitos `4321`; esa guía trae dos documentos para probar la descarga firmada.
+
+### Almacenamiento de documentos
+
+MinIO se publica en `127.0.0.1:9000` (`STORAGE_HOST_PORT`), sin consola web. Las URLs firmadas se calculan contra `STORAGE_PUBLIC_ENDPOINT` (`http://localhost:9000`), que es el que alcanza el navegador; el servidor usa `STORAGE_ENDPOINT`. Si corres la app fuera de Compose, deja ambos en `http://localhost:9000`. Sin las variables `STORAGE_*`, la app arranca igual fuera de producción y la descarga responde 503. Diseño y evidencia en [documentos.md](documentos.md).
 
 ### Puertos ocupados
 
@@ -36,7 +57,7 @@ REDIS_URL=redis://localhost:56379
 ```bash
 pnpm install
 cp .env.example .env
-docker compose up -d postgres redis
+docker compose up -d postgres redis minio-init
 pnpm db:migrate && pnpm db:seed
 pnpm dev
 ```
@@ -61,7 +82,7 @@ El esquema vive en [`packages/database/src/schema.ts`](../packages/database/src/
 2. `pnpm db:generate --name descripcion` genera la migración SQL; revísala antes de versionarla.
 3. `pnpm db:migrate` la aplica.
 
-`pnpm db:seed` es idempotente: crea las guías ficticias `RS0000000001` y `RS0000000002` solo si no existen.
+`pnpm db:seed` es idempotente: crea las guías ficticias `RS0000000001` a `RS0000000008` y sus documentos (la tabla con los dígitos de cada una está en [pentest-freeze.md](pentest-freeze.md#datos-de-prueba)) solo si no existen. Los PDF de los documentos están en `packages/database/fixtures/documents` y los sube `minio-init`.
 
 ## Pruebas smoke en Docker
 
@@ -69,25 +90,46 @@ El esquema vive en [`packages/database/src/schema.ts`](../packages/database/src/
 pnpm test:smoke
 ```
 
-[`scripts/smoke-auth.sh`](../scripts/smoke-auth.sh) levanta Compose con `--wait` (reconstruye si hace falta), borra los contadores `rl:*` de Redis de ejecuciones anteriores, borra y vuelve a sembrar las dos guías ficticias (para que queden sin dueño ni franja) y corre [`smoke/auth.smoke.test.ts`](../apps/rutasegura/smoke/auth.smoke.test.ts) contra `http://localhost:$APP_HOST_PORT`. Al final imprime el conteo de `auth_events`, de `shipment_audit_events` y de avisos simulados como evidencia de la bitácora.
+[`scripts/smoke-auth.sh`](../scripts/smoke-auth.sh) levanta Compose con `--wait` (reconstruye si hace falta), borra los contadores `rl:*` de Redis de ejecuciones anteriores, borra y vuelve a sembrar las guías ficticias (para que queden sin dueño ni franja) y corre [`smoke/auth.smoke.test.ts`](../apps/rutasegura/smoke/auth.smoke.test.ts), [`smoke/documents.smoke.test.ts`](../apps/rutasegura/smoke/documents.smoke.test.ts) e [`smoke/integration.smoke.test.ts`](../apps/rutasegura/smoke/integration.smoke.test.ts) con la imagen `runner` contra `http://localhost:$APP_HOST_PORT`. Al final imprime el conteo de `auth_events`, de `shipment_audit_events` y de avisos simulados como evidencia de la bitácora.
 
-Los 25 casos cubren: health; registro con contraseña débil, válida y duplicada; login con cookies `HttpOnly` y `SameSite=Lax`; ruta protegida con JWT válido, ausente y alterado; rotación y reutilización del refresh token; logout inmediato; envíos sin sesión (401); reclamo idempotente de `RS0000000001`; agenda, reprogramación y franjas inválidas; detalle con bitácora y sin datos del destinatario; Bob sobre el ULID de Alice (404 en `GET` y `PATCH`, idéntico a un ULID inexistente); lista de Alice sin la guía no reclamada; avisos sin sesión (401), Alice con sus 2 avisos genéricos, Bob sin acceso a ellos ni capacidad de marcarlos, y marcado como leído; cancelación de la agenda sin sesión (401), Bob sobre el ULID de Alice (404 en `DELETE`, idéntico a un ULID inexistente, y la franja de Alice intacta), cancelación idempotente de Alice, evento `unscheduled` en la bitácora y un único aviso `shipment_unscheduled`; bloqueo tras 5 fallos con respuesta idéntica; 403 desde otro origen; 429 por IP y por correo con `X-Forwarded-For` falsificado; y rastreo de doble dato con 200, 404 uniforme y 429. CI los corre en el job `Smoke auth en Docker`.
+Los 25 casos cubren: health; registro con contraseña débil, válida y duplicada; login con cookies `HttpOnly` y `SameSite=Lax`; ruta protegida con JWT válido, ausente y alterado; rotación y reutilización del refresh token; logout inmediato; envíos sin sesión (401); reclamo idempotente de `RS0000000001`; agenda, reprogramación y franjas inválidas; detalle con bitácora y sin datos del destinatario; Bob sobre el ULID de Alice (404 en `GET` y `PATCH`, idéntico a un ULID inexistente); lista de Alice sin la guía no reclamada; avisos sin sesión (401), Alice con sus 2 avisos genéricos, Bob sin acceso a ellos ni capacidad de marcarlos, y marcado como leído; cancelación de la agenda sin sesión (401), Bob sobre el ULID de Alice (404 en `DELETE`, idéntico a un ULID inexistente, y la franja de Alice intacta), cancelación idempotente de Alice, evento `unscheduled` en la bitácora y un único aviso `shipment_unscheduled`; bloqueo tras 5 fallos con respuesta idéntica; 403 desde otro origen; 429 por IP y por correo con `X-Forwarded-For` falsificado; y rastreo de doble dato con 200, 404 uniforme y 429.
+
+Los 10 casos de documentos cubren: listado y emisión sin sesión (401); listado sin claves internas del almacenamiento; Dave sobre los documentos de Carol (404 idéntico a un ULID inexistente); URL firmada de 60 s que descarga el PDF como adjunto; 403 directo al bucket sin firma y en listados anónimos; 403 con la firma alterada o el plazo ampliado; 403 al vencer la URL (la prueba espera los 60 s reales); evento `document_url_issued` en la bitácora; y 429 en la emisión de URLs. La suite tarda algo más de un minuto por esa espera.
+
+Los 14 casos de integración recorren la API como la usa el frontend, con `RS0000000008`: cada respuesta se valida con el esquema de `@rutasegura/contracts` en modo estricto (sin campos de más) y con `Cache-Control: no-store`; cookies `rs_at` y `rs_rt` con `HttpOnly`, `SameSite=Lax` y `Path=/`; firma alterada y cookie de acceso ausente (401) seguidas de la renovación con el refresh; reutilización del refresh que revoca la familia; rastreo, reclamo, confirmar, reprogramar y cancelar franja; documentos y descarga del PDF; bitácora y avisos; cada código de error con su mensaje fijo y sin trazas ni nombres de servicios; 429 con `Retry-After`; y logout que revoca acceso y refresh.
+
+CI corre los tres archivos en el job `Smoke y flujos de UI en Docker`, seguidos de [`scripts/evidence-signed-urls.sh`](../scripts/evidence-signed-urls.sh) y de los flujos de UI.
+
+## Flujos de UI en Docker
+
+```bash
+pnpm test:e2e:flows
+```
+
+[`scripts/e2e-flows.sh`](../scripts/e2e-flows.sh) levanta la imagen `runner`, restablece `RS0000000004` a `RS0000000007` y corre [`e2e-flows`](../apps/rutasegura/e2e-flows) con [`playwright.flows.config.ts`](../apps/rutasegura/playwright.flows.config.ts) en Chromium y WebKit contra el entorno Docker completo: portal sin sesión (redirección al login con `next`), rastreo público, y el flujo completo de registro, login, carga XSS en el nombre, reclamo, agenda, descarga firmada, cuenta regresiva y "Generar enlace" al vencer (con reloj simulado), bitácora, 404 de un envío ajeno y logout. Cada motor usa su propia guía y su propia IP. Falla ante cualquier error de consola, violaciones de CSP e hidratación incluidas.
+
+`critical.flow.spec.ts` añade el smoke de flujos críticos: renovación de la sesión sin la cookie de acceso (en una página del servidor y en una descarga), confirmar, reprogramar y cancelar franja, errores de rastreo, 429 con cuenta regresiva, caída de PostgreSQL (página de error genérica y log sin la consulta) y CSP, HSTS y `nosniff` en cada página. `pnpm test:smoke:ui` es el mismo script con la imagen `runner` fijada; el checklist y el registro de defectos están en [smoke-ui.md](smoke-ui.md).
+
+La primera vez hay que instalar los navegadores: `pnpm --filter @rutasegura/app exec playwright install chromium webkit`.
 
 ## Scripts
 
-| Comando                                | ¿Qué hace?                                                          |
-| -------------------------------------- | ------------------------------------------------------------------- |
-| `pnpm dev`                             | Servidor de desarrollo                                              |
-| `pnpm build`                           | Build de producción `standalone`                                    |
-| `pnpm lint`                            | ESLint en todos los paquetes                                        |
-| `pnpm typecheck`                       | TypeScript en todos los paquetes                                    |
-| `pnpm test`                            | Pruebas unitarias con Vitest                                        |
-| `pnpm test:e2e`                        | Pruebas en Chromium, WebKit y WebKit iPhone (requiere `pnpm build`) |
-| `pnpm test:smoke`                      | Pruebas smoke de autenticación contra Docker Compose                |
-| `pnpm format` / `pnpm format:check`    | Prettier                                                            |
-| `pnpm db:generate` / `pnpm db:migrate` | Migraciones con drizzle-kit                                         |
-| `pnpm db:seed`                         | Datos ficticios de desarrollo (idempotente)                         |
-| `pnpm docker:up` / `pnpm docker:down`  | Entorno completo                                                    |
+| Comando                                | ¿Qué hace?                                                                |
+| -------------------------------------- | ------------------------------------------------------------------------- |
+| `pnpm dev`                             | Servidor de desarrollo                                                    |
+| `pnpm build`                           | Build de producción `standalone`                                          |
+| `pnpm lint`                            | ESLint en todos los paquetes                                              |
+| `pnpm typecheck`                       | TypeScript en todos los paquetes                                          |
+| `pnpm test`                            | Pruebas unitarias con Vitest                                              |
+| `pnpm test:e2e`                        | Pruebas en Chromium, WebKit y WebKit iPhone (requiere `pnpm build`)       |
+| `pnpm test:smoke`                      | Pruebas smoke de API (auth, envíos, documentos) contra Docker             |
+| `pnpm test:e2e:flows`                  | Flujos de UI en Chromium y WebKit contra Docker                           |
+| `pnpm test:smoke:ui`                   | Smoke de UI de flujos críticos contra la imagen de producción             |
+| `./scripts/freeze-check.sh [--tag]`    | Verificación completa del freeze ([pentest-freeze.md](pentest-freeze.md)) |
+| `pnpm format` / `pnpm format:check`    | Prettier                                                                  |
+| `pnpm db:generate` / `pnpm db:migrate` | Migraciones con drizzle-kit                                               |
+| `pnpm db:seed`                         | Datos ficticios de desarrollo (idempotente)                               |
+| `pnpm docker:up` / `pnpm docker:down`  | Entorno completo                                                          |
 
 Antes de abrir una PR conviene correr lo mismo que CI:
 
@@ -150,3 +192,5 @@ flowchart LR
 ## Versiones
 
 Las entregas demostrables se etiquetan con versiones semánticas (`v0.1.0`, `v0.2.0`) y cada cambio se registra en [`CHANGELOG.md`](../CHANGELOG.md).
+
+Una versión que va a pentest se congela con `./scripts/freeze-check.sh --tag`: con el árbol limpio y todas las verificaciones en verde, crea el tag anotado `vX.Y.Z-pentest` y la rama `release/pentest-vX.Y.Z`. Las correcciones de hallazgos van en `hotfix/*` desde esa rama y generan una versión nueva con su re-test. Procedimiento completo en [pentest-freeze.md](pentest-freeze.md).

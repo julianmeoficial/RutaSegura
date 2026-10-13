@@ -27,7 +27,11 @@ export type AuthResult =
  * aún no haya vencido. El motivo del fallo es solo para el log de seguridad.
  */
 export async function authenticateRequest(request: Request): Promise<AuthResult> {
-  const token = readCookie(request, cookieNames(isHttpsRequest(request)).access);
+  return authenticateAccessToken(readCookie(request, cookieNames(isHttpsRequest(request)).access));
+}
+
+/** Misma verificación que `authenticateRequest`, a partir del valor de la cookie. */
+export async function authenticateAccessToken(token: string | undefined): Promise<AuthResult> {
   if (!token) return { ok: false, reason: "missing_token" };
 
   const claims = await verifyAccessToken(token, tokenConfig());

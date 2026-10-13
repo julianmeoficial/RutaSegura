@@ -4,7 +4,7 @@ Plataforma de seguimiento de envíos segura por diseño. Es una única aplicaci�
 
 RutaSegura corrige desde el diseño las debilidades encontradas en el análisis HTTP del sitio de rastreo que tomamos como referencia, y funciona igual en navegadores **WebKit y Chromium**: cada pull request se prueba en ambos motores antes de llegar a `main`.
 
-El proyecto está en el Sprint 0: la base técnica y la API están listas; las pantallas llegan con los mockups de Figma.
+El proyecto está en el Sprint 3: la API, la interfaz pública y el portal autenticado (envíos, agenda y documentos con URL firmada) están integrados y listos para desplegar. La versión 0.4.0 es la que se congela para el pentest ([docs/pentest-freeze.md](docs/pentest-freeze.md)).
 
 ## Arranque rápido
 
@@ -16,7 +16,7 @@ pnpm docker:up
 curl -i http://localhost:3000/api/v1/health
 ```
 
-Compose levanta la app, PostgreSQL 17 y Redis 7. El health check responde `200` cuando ambas dependencias responden. Si ya tienes PostgreSQL o Redis locales ocupando los puertos, consulta [docs/desarrollo.md](docs/desarrollo.md#puertos-ocupados).
+Compose levanta la app, PostgreSQL 17, Redis 7 y MinIO (bucket privado de documentos). El health check responde `200` cuando PostgreSQL y Redis responden. La interfaz queda en `http://localhost:3000`. Si ya tienes PostgreSQL o Redis locales ocupando los puertos, consulta [docs/desarrollo.md](docs/desarrollo.md#puertos-ocupados).
 
 ## Scripts
 
@@ -28,7 +28,10 @@ Compose levanta la app, PostgreSQL 17 y Redis 7. El health check responde `200` 
 | `pnpm typecheck`                       | TypeScript en todos los paquetes            |
 | `pnpm test`                            | Pruebas unitarias                           |
 | `pnpm test:e2e`                        | Pruebas en Chromium, WebKit y WebKit iPhone |
-| `pnpm test:smoke`                      | Smoke de autenticación contra Docker        |
+| `pnpm test:smoke`                      | Smoke de la API contra Docker               |
+| `pnpm test:e2e:flows`                  | Flujos de UI en Chromium y WebKit (Docker)  |
+| `pnpm test:smoke:ui`                   | Smoke de UI contra la imagen de producción  |
+| `./scripts/freeze-check.sh`            | Verificación completa del freeze            |
 | `pnpm format`                          | Prettier                                    |
 | `pnpm db:generate` / `pnpm db:migrate` | Migraciones                                 |
 | `pnpm db:seed`                         | Datos ficticios de desarrollo               |
@@ -43,8 +46,11 @@ Compose levanta la app, PostgreSQL 17 y Redis 7. El health check responde `200` 
 | [Paquetes](docs/paquetes.md)                                        | Workspace, dependencias y versiones                                           |
 | [Seguridad](docs/seguridad.md)                                      | Hallazgos del sitio de referencia y controles de RutaSegura                   |
 | [Autenticación](docs/autenticacion.md)                              | Argon2id, bloqueo, JWT, rate limiting, rastreo de doble dato y auditoría      |
+| [Documentos](docs/documentos.md)                                    | Bucket privado, URL firmada de 60 s y evidencia de que no es público          |
 | [Compatibilidad de navegadores](docs/compatibilidad-navegadores.md) | WebKit y Chromium como criterio de aceptación                                 |
 | [Desarrollo](docs/desarrollo.md)                                    | Entorno local, ramas (`feat/`, `fix/`, `hotfix/`, `chore/`, `docs/`), PR y CI |
+| [Smoke de UI](docs/smoke-ui.md)                                     | Checklist de flujos críticos y registro de defectos                           |
+| [Freeze para pentest](docs/pentest-freeze.md)                       | Tag, rama, alcance, objetivo, datos de prueba y checklist firmado por la SM   |
 | [CHANGELOG](CHANGELOG.md)                                           | Historial de versiones                                                        |
 
 ## Equipo

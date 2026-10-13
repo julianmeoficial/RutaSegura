@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Pruebas smoke de autenticación contra el entorno Docker Compose.
-# Levanta (o reutiliza) app, PostgreSQL, Redis y migraciones, limpia los
+# Pruebas smoke contra el entorno Docker Compose.
+# Levanta (o reutiliza) app, PostgreSQL, Redis, MinIO y migraciones, limpia los
 # contadores de rate limit de ejecuciones anteriores, restablece las guías
 # ficticias (sin dueño ni franja) y corre la suite.
 set -euo pipefail
@@ -15,15 +15,19 @@ fi
 port="$(grep -E '^APP_HOST_PORT=' .env | cut -d= -f2 || true)"
 port="${port:-3000}"
 
+# Por defecto, la imagen de producción, la misma que recibe el pentest.
+export APP_BUILD_TARGET="${APP_BUILD_TARGET:-runner}"
+echo "Imagen de la app: ${APP_BUILD_TARGET}"
+
 docker compose up -d --build --wait rutasegura
 
 docker compose exec -T redis sh -c \
   "redis-cli --scan --pattern 'rl:*' | xargs -r redis-cli del > /dev/null"
 
-# Solo datos ficticios de la semilla: se borran y se vuelven a sembrar para que
-# cada ejecución pueda reclamar RS0000000001 desde cero.
+# Solo datos ficticios de la semilla: se borran (sus documentos caen en cascada)
+# y se vuelven a sembrar para que cada ejecución pueda reclamarlos desde cero.
 docker compose exec -T postgres psql -q -U rutasegura -d rutasegura -c \
-  "delete from shipments where tracking_number in ('RS0000000001', 'RS0000000002');"
+  "delete from shipments where tracking_number like 'RS000000000_';"
 docker compose run --rm migrate > /dev/null
 
 SMOKE_BASE_URL="http://localhost:${port}" pnpm --filter @rutasegura/app test:smoke

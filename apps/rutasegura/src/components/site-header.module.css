@@ -1,0 +1,77 @@
+.header {
+  width: 100%;
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 0;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: var(--target);
+  color: var(--foreground);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.account {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--target);
+  min-height: var(--target);
+  border-radius: var(--radius-sm);
+  color: var(--primary-strong);
+}
+
+.nav {
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.tabs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+@media (min-width: 40rem) {
+  .tabs {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--target);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-md);
+  color: var(--foreground);
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+}
+
+.tab:hover {
+  background: var(--primary-soft);
+}
+
+.tab[aria-current="page"] {
+  background: var(--primary);
+  color: var(--on-primary);
+}

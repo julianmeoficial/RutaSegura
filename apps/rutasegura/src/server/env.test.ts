@@ -12,6 +12,21 @@ const validLocal = {
 
 const strongSecret = "q3Zp9vN1xT7sK2mB8wLc4RfYh6JdGa0E";
 
+const validProduction = {
+  ...validLocal,
+  APP_ENV: "production",
+  NEXT_PUBLIC_APP_URL: "https://rutasegura.example.org",
+  SESSION_SECRET: strongSecret,
+  CSRF_SECRET: strongSecret,
+  HMAC_SECRET: strongSecret,
+  STORAGE_ENDPOINT: "https://storage.rutasegura.co",
+  STORAGE_PUBLIC_ENDPOINT: "https://storage.rutasegura.co",
+  STORAGE_REGION: "auto",
+  STORAGE_BUCKET: "rutasegura-private",
+  STORAGE_ACCESS_KEY_ID: "AKIA7Q2M9X4V1C8B3N6P",
+  STORAGE_SECRET_ACCESS_KEY: strongSecret,
+};
+
 describe("parseEnv", () => {
   it("acepta la configuración local de ejemplo y aplica valores por defecto", () => {
     const env = parseEnv(validLocal);
@@ -38,15 +53,24 @@ describe("parseEnv", () => {
   });
 
   it("en producción acepta secretos reales sobre https", () => {
-    const env = parseEnv({
-      ...validLocal,
-      APP_ENV: "production",
-      NEXT_PUBLIC_APP_URL: "https://rutasegura.example.org",
-      SESSION_SECRET: strongSecret,
-      CSRF_SECRET: strongSecret,
-      HMAC_SECRET: strongSecret,
-    });
+    const env = parseEnv(validProduction);
     expect(env.APP_ENV).toBe("production");
+  });
+
+  it("en producción exige el almacenamiento privado completo y sin valores de ejemplo", () => {
+    const withoutBucket: Record<string, string | undefined> = { ...validProduction };
+    delete withoutBucket.STORAGE_BUCKET;
+    expect(() => parseEnv(withoutBucket)).toThrow(/STORAGE_BUCKET/);
+    expect(() =>
+      parseEnv({ ...validProduction, STORAGE_SECRET_ACCESS_KEY: "local_only_change_me_app" }),
+    ).toThrow(/STORAGE_SECRET_ACCESS_KEY/);
+    expect(() =>
+      parseEnv({ ...validProduction, STORAGE_PUBLIC_ENDPOINT: "http://storage.rutasegura.co" }),
+    ).toThrow(/STORAGE_PUBLIC_ENDPOINT/);
+  });
+
+  it("fuera de producción el almacenamiento es opcional", () => {
+    expect(parseEnv(validLocal).STORAGE_BUCKET).toBeUndefined();
   });
 
   it("aplica los valores por defecto de sesión, bloqueo y rate limit", () => {
@@ -84,15 +108,7 @@ describe("parseEnv", () => {
 
   it("en producción exige https en la allowlist CORS", () => {
     expect(() =>
-      parseEnv({
-        ...validLocal,
-        APP_ENV: "production",
-        NEXT_PUBLIC_APP_URL: "https://rutasegura.example.org",
-        SESSION_SECRET: strongSecret,
-        CSRF_SECRET: strongSecret,
-        HMAC_SECRET: strongSecret,
-        CORS_ALLOWED_ORIGINS: "http://portal.example.org",
-      }),
+      parseEnv({ ...validProduction, CORS_ALLOWED_ORIGINS: "http://portal.example.org" }),
     ).toThrow(/CORS_ALLOWED_ORIGINS/);
   });
 

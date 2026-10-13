@@ -168,7 +168,8 @@ export const shipments = pgTable(
  * Columnas que referencian un envío desde otra tabla. `sql.raw` solo recibe
  * estos literales fijos, así que ningún dato de una petición llega al SQL.
  */
-type ShipmentReferenceColumn = "shipment_events.shipment_id" | "shipment_audit_events.shipment_id";
+type ShipmentReferenceColumn =
+  "shipment_events.shipment_id" | "shipment_audit_events.shipment_id" | "documents.shipment_id";
 
 /** Visible solo si el envío lo es: la subconsulta aplica la RLS de `shipments`. */
 const shipmentVisible = (column: ShipmentReferenceColumn) =>
@@ -205,6 +206,7 @@ export const shipmentAuditEventType = pgEnum("shipment_audit_event_type", [
   "rescheduled",
   "status_changed",
   "unscheduled",
+  "document_url_issued",
 ]);
 
 /**
@@ -234,6 +236,49 @@ export const shipmentAuditEvents = pgTable(
     pgPolicy("shipment_audit_events_insert", {
       for: "insert",
       withCheck: shipmentVisible("shipment_audit_events.shipment_id"),
+    }),
+  ],
+);
+
+/**
+ * Soportes de un envío guardados en el bucket privado. La fila solo guarda la
+ * clave opaca del objeto, nunca una URL: cada descarga pide una URL firmada.
+ * Tipos PDF, JPEG y PNG, de 10 MiB como máximo.
+ */
+export const documents = pgTable(
+  "documents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** ULID expuesto por la API. */
+    publicId: text("public_id").notNull(),
+    shipmentId: uuid("shipment_id")
+      .notNull()
+      .references(() => shipments.id, { onDelete: "cascade" }),
+    objectKey: text("object_key").notNull(),
+    fileName: text("file_name").notNull(),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    sha256: text("sha256").notNull(),
+    createdAt,
+  },
+  (table) => [
+    uniqueIndex("documents_public_id_unique").on(table.publicId),
+    uniqueIndex("documents_object_key_unique").on(table.objectKey),
+    index("documents_shipment_idx").on(table.shipmentId, table.createdAt),
+    check(
+      "documents_mime_type_allowed",
+      sql`${table.mimeType} in ('application/pdf', 'image/jpeg', 'image/png')`,
+    ),
+    check("documents_size_valid", sql`${table.sizeBytes} between 1 and 10485760`),
+    check("documents_sha256_hex", sql`${table.sha256} ~ '^[0-9a-f]{64}$'`),
+    check("documents_file_name_length", sql`char_length(${table.fileName}) between 1 and 160`),
+    pgPolicy("documents_select", {
+      for: "select",
+      using: shipmentVisible("documents.shipment_id"),
+    }),
+    pgPolicy("documents_insert_operator", {
+      for: "insert",
+      withCheck: sql`${appMode} = 'operator'`,
     }),
   ],
 );

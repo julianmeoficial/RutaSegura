@@ -2,9 +2,24 @@
 
 Todos los cambios relevantes de RutaSegura se registran aquí. El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
-## [Unreleased](https://github.com/julianmeoficial/RutaSegura/compare/acd29ee...HEAD)
+## [Unreleased](https://github.com/julianmeoficial/RutaSegura/compare/v0.4.0-pentest...HEAD)
+
+## [0.4.0](https://github.com/julianmeoficial/RutaSegura/compare/acd29ee...v0.4.0-pentest) - 2026-10-13
+
+Versión congelada para el pentest: sprints 1 a 3 e integración del frontend con la API. El tag `v0.4.0-pentest` y la rama `release/pentest-v0.4.0` se crean con `./scripts/freeze-check.sh --tag` una vez hecho el commit; el alcance y el checklist están en [docs/pentest-freeze.md](docs/pentest-freeze.md).
 
 ### Añadido
+
+- Integración frontend-backend y freeze para pentest:
+  - Catálogo único de mensajes de error en `lib/error-messages.ts`, con variantes por pantalla que no revelan si una guía o una cuenta existen; `ApiErrorAlert` y el cliente de la API lo usan.
+  - Error boundaries (`error.tsx`, `portal/error.tsx` y `global-error.tsx`) con "Algo salió mal", botón para reintentar y el `digest` como código de referencia, sin mensaje ni traza.
+  - `security.auth_failure` con `source: "page"` cuando una página del portal recibe una cookie de acceso inválida, vencida o revocada.
+  - Smoke de integración contra Docker (`smoke/integration.smoke.test.ts`): contratos estrictos, cookies, rotación y reutilización del refresh, agenda completa, documentos, bitácora, catálogo de errores, 429 y logout.
+  - Smoke de UI de flujos críticos (`e2e-flows/critical.flow.spec.ts` y `pnpm test:smoke:ui`): renovación de sesión, confirmar, reprogramar y cancelar franja, errores de rastreo, 429 con cuenta regresiva, caída de PostgreSQL y CSP, HSTS y `nosniff` en cada página.
+  - Variable `APP_BUILD_TARGET` en Compose para levantar la imagen `runner` de producción; los smoke la usan por defecto.
+  - Guías ficticias RS0000000006 a RS0000000008 con su PDF para los nuevos flujos.
+  - `scripts/freeze-check.sh`, `docs/pentest-freeze.md` y `docs/smoke-ui.md` (checklist y registro de defectos).
+  - Casos de inyección SQL para los repositorios de documentos.
 
 - Sprint 1, autenticación en el servidor (OWASP A07):
   - `POST /api/v1/auth/register`, `login`, `refresh`, `logout` y `GET /api/v1/auth/me`.
@@ -47,6 +62,20 @@ Todos los cambios relevantes de RutaSegura se registran aquí. El formato sigue 
   - `requireUser()` sustituye el patrón `authenticate` + 401 en las rutas protegidas.
   - Regla ESLint `no-restricted-syntax` contra `sql.raw`, `unsafe()` y SQL como string o concatenación en `execute()` y `query()`.
   - Prueba `sql-injection.test.ts`: ejecuta los repositorios reales con cargas de inyección y verifica que viajen como parámetros `$n`.
+- Sprint 3, frontend React + TypeScript con los diseños S06:
+  - Páginas públicas: rastreo (`/rastreo`, destino de `/`), ingreso, registro y panel de estados y errores.
+  - Portal autenticado: Mis envíos con vinculación de guías, detalle con bitácora, agenda de franjas, documentos y seguridad de la cuenta. Sin sesión redirige a `/ingresar?next=…`; envío ajeno o inexistente muestra la misma página 404.
+  - Componentes base accesibles (objetivos táctiles de 44 px, foco visible, `aria-live`), CSS Modules sin estilos en línea y fuente Inter servida desde el propio origen: la CSP estricta no cambia.
+  - Cliente de la API con renovación silenciosa de sesión ante un 401 y cuenta regresiva de `Retry-After` ante un 429.
+- Documentos con URL firmada (OWASP A01 y A05), solo descarga:
+  - MinIO en Compose con bucket privado sin acceso anónimo, cuenta de la app de solo lectura y PDF ficticios (`minio-init`).
+  - `GET /api/v1/shipments/{id}/documents` y `POST /api/v1/documents/{id}/download-url`: URL SigV4 de 60 s (`SIGNED_URL_TTL_SECONDS`, máximo 300) con `attachment` y `no-store` firmados; ajeno o inexistente responde 404; rate limit `DOCUMENTS_RATE_LIMIT_*`.
+  - Migración `0004`: tabla `documents` con RLS heredada del envío y evento de bitácora `document_url_issued`.
+  - En producción el almacenamiento es obligatorio, sin valores de ejemplo y con endpoint HTTPS.
+  - `docs/documentos.md` con la evidencia de que el bucket no es público y `scripts/evidence-signed-urls.sh` para reproducirla.
+- Pruebas del Sprint 3:
+  - Smoke de documentos contra Docker: IDOR, 403 sin firma, con firma alterada y al vencer la URL, listados anónimos, bitácora y 429.
+  - Flujos de UI en Chromium y WebKit contra Docker (`pnpm test:e2e:flows`): registro, login, carga XSS en el nombre, reclamo, agenda, descarga firmada y su vencimiento, 404 y logout, sin errores de consola.
 
 ### Cambiado
 
@@ -58,10 +87,16 @@ Todos los cambios relevantes de RutaSegura se registran aquí. El formato sigue 
 - El README se reduce a la descripción, el arranque rápido y los scripts; el resto se mueve a `docs/`.
 - La guía ficticia `RS0000000001` queda en tránsito en la semilla para poder agendarla; el smoke la restablece en cada ejecución.
 - El rastreo público consulta dentro de una transacción con el modo RLS `public_tracking`; su contrato no cambia.
+- `/` redirige a `/rastreo`; la prueba E2E de humo verifica la página de rastreo.
+- El job de CI `Smoke auth en Docker` pasa a `Smoke y flujos de UI en Docker`: incluye MinIO, el smoke de documentos, el script de evidencia y los flujos de UI.
 - `CODEOWNERS` incluye a Mónica y a Julián en todas las reglas para que cada PR pida la revisión cruzada ([#2](https://github.com/julianmeoficial/RutaSegura/pull/2), pendiente de aprobación).
+
+- El job de CI de smoke construye la imagen `runner`, así que los flujos de UI validan la CSP estricta de producción.
+- La versión de `@rutasegura/app` pasa de 0.1.0 a 0.4.0.
 
 ### Corregido
 
+- Las páginas del servidor ya no dejan en stderr el error de Drizzle con la consulta y sus parámetros (incluido el ID de sesión) cuando falla la base de datos: `pageData()` lo registra como `page.unhandled_error` y lanza un error sin detalles (DEF-01 de `docs/smoke-ui.md`).
 - El diagrama de ramas de `docs/desarrollo.md` pasa de `gitGraph` a `flowchart`, que también se dibuja en visores con versiones antiguas de Mermaid.
 
 ## [0.1.0](https://github.com/julianmeoficial/RutaSegura/pull/1) - 2026-09-27

@@ -15,17 +15,29 @@ export type AccessDeniedReason = "ownership";
  * como HMAC. Nunca el token, la cookie, el correo, la guía ni el cuerpo.
  */
 function context(request: Request, route: string): Record<string, unknown> {
-  let ipHash: string | undefined;
+  return { route, method: request.method, ipHash: ipHashOf(request) };
+}
+
+function ipHashOf(request: Request): string | undefined {
   try {
-    ipHash = keyedDigest(getEnv().HMAC_SECRET, "log-ip", clientIp(request));
+    return keyedDigest(getEnv().HMAC_SECRET, "log-ip", clientIp(request));
   } catch {
-    ipHash = undefined;
+    return undefined;
   }
-  return { route, method: request.method, ipHash };
 }
 
 export function logAuthFailure(request: Request, route: string, reason: AuthFailureReason) {
   logger.warn("security.auth_failure", { ...context(request, route), reason });
+}
+
+/** Fallo de sesión al renderizar una página del portal (Server Component). */
+export function logPageAuthFailure(
+  requestHeaders: Headers,
+  route: string,
+  reason: Exclude<AuthFailureReason, "missing_token" | "refresh_invalid">,
+) {
+  const ipHash = ipHashOf(new Request("http://page.internal/", { headers: requestHeaders }));
+  logger.warn("security.auth_failure", { source: "page", route, method: "GET", ipHash, reason });
 }
 
 export function logAccessDenied(request: Request, route: string, reason: AccessDeniedReason) {

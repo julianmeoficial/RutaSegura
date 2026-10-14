@@ -64,6 +64,18 @@ export function notificationsRules(userId: string): RateLimitRule[] {
   ];
 }
 
+/** Listar documentos y pedir URLs firmadas: límite por usuario, con su id como HMAC. */
+export function documentsRules(userId: string): RateLimitRule[] {
+  const env = getEnv();
+  return [
+    {
+      key: ruleKey("documents", "user", userId),
+      limit: env.DOCUMENTS_RATE_LIMIT_MAX,
+      windowSeconds: env.DOCUMENTS_RATE_LIMIT_WINDOW_SECONDS,
+    },
+  ];
+}
+
 /**
  * Aplica las reglas en Redis. Si Redis no responde, lanza: los endpoints de
  * autenticación fallan cerrados (503) en lugar de quedar sin límite.

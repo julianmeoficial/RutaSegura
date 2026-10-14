@@ -1,0 +1,267 @@
+.account {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.accountTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.who {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.whoName {
+  font-weight: 700;
+}
+
+.whoMeta {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.tabs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+@media (min-width: 40rem) {
+  .tabs {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--target);
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-md);
+  color: var(--foreground);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.tab:hover {
+  background: var(--primary-soft);
+}
+
+.tab[aria-current="page"] {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.kpis {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+@media (min-width: 40rem) {
+  .kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.kpi {
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+}
+
+.kpiLabel {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.kpiValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.rowTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.rowTitle {
+  font-size: 1.375rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+.slotGroup {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  align-self: stretch;
+}
+
+.slots {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dates {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.legend {
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  padding: 0;
+}
+
+.option {
+  position: relative;
+  display: block;
+}
+
+.option input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.optionBox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-height: var(--target);
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.datePill .optionBox {
+  padding: 0.5rem 0.875rem;
+  text-align: center;
+}
+
+.option input:checked + .optionBox {
+  background: var(--primary-soft);
+  border-width: 2px;
+}
+
+.option input:focus-visible + .optionBox {
+  box-shadow: var(--focus-ring);
+}
+
+.option input:disabled + .optionBox {
+  background: var(--neutral-soft);
+  border-color: var(--neutral-border);
+  color: var(--muted);
+}
+
+.option input:disabled {
+  cursor: not-allowed;
+}
+
+.optionTitle {
+  font-weight: 700;
+}
+
+.optionMeta {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.docs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.doc {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-md);
+}
+
+.docTop {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.docName {
+  font-weight: 700;
+  word-break: break-word;
+}
+
+.dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1rem;
+  margin: 0;
+}
+
+.dl dt {
+  color: var(--muted);
+}
+
+.dl dd {
+  margin: 0;
+  font-weight: 600;
+}

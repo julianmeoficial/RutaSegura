@@ -1,6 +1,6 @@
 {
   "name": "@rutasegura/app",
-  "version": "0.1.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,9 +11,12 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:e2e:flows": "playwright test --config playwright.flows.config.ts",
     "test:smoke": "vitest run --config vitest.smoke.config.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1150.0",
+    "@aws-sdk/s3-request-presigner": "3.1150.0",
     "@next/env": "16.3.6",
     "@node-rs/argon2": "2.2.1",
     "@rutasegura/contracts": "workspace:*",

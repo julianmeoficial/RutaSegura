@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+const HEADING = "Rastrea tu envío sin exponer tus datos";
+
 test("la página pinta y la CSP estricta no bloquea recursos propios", async ({ page }) => {
   const problems: string[] = [];
   page.on("console", (message) => {
@@ -9,7 +11,8 @@ test("la página pinta y la CSP estricta no bloquea recursos propios", async ({ 
 
   const response = await page.goto("/");
   expect(response?.status()).toBe(200);
-  await expect(page.getByRole("heading", { level: 1, name: "RutaSegura" })).toBeVisible();
+  await expect(page).toHaveURL(/\/rastreo$/);
+  await expect(page.getByRole("heading", { level: 1, name: HEADING })).toBeVisible();
 
   const headers = response!.headers();
   const policy = headers["content-security-policy"] ?? "";
@@ -32,9 +35,16 @@ test.describe("sin JavaScript", () => {
   test.use({ javaScriptEnabled: false });
 
   test("el contenido llega renderizado desde el servidor", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.getByRole("heading", { level: 1, name: "RutaSegura" })).toBeVisible();
+    await page.goto("/rastreo");
+    await expect(page.getByRole("heading", { level: 1, name: HEADING })).toBeVisible();
+    await expect(page.getByLabel("Número de guía")).toBeVisible();
   });
+});
+
+test("el portal sin sesión redirige al login sin tocar la base de datos", async ({ page }) => {
+  await page.goto("/portal");
+  await expect(page).toHaveURL(/\/ingresar\?next=%2Fportal$/);
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 });
 
 test("una ruta de API inexistente responde con el 404 JSON genérico", async ({ request }) => {

@@ -3,11 +3,15 @@ services:
     build:
       context: .
       dockerfile: apps/rutasegura/Dockerfile
-      target: development
+      # `development` (next dev, recarga en caliente) o `runner` (imagen de
+      # producción: build standalone, usuario sin privilegios y CSP estricta).
+      # Las pruebas smoke, los flujos de UI y el pentest usan `runner`.
+      target: ${APP_BUILD_TARGET:-development}
     env_file: .env
     environment:
       DATABASE_URL: postgresql://rutasegura:local_only_change_me@postgres:5432/rutasegura
       REDIS_URL: redis://redis:6379
+      STORAGE_ENDPOINT: http://minio:9000
     ports:
       - "${APP_HOST_PORT:-3000}:3000"
     depends_on:
@@ -15,6 +19,8 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/v1/health"]
       interval: 10s
@@ -65,6 +71,44 @@ services:
       timeout: 3s
       retries: 10
 
+  # Almacenamiento S3 compatible para los documentos. El bucket es privado: solo
+  # se descarga con URL firmada. La consola web no se publica. MinIO dejó de
+  # publicar imágenes en Docker Hub: se usa la de Chainguard, fijada por digest
+  # (incluye `mc` y `sh`, por eso también sirve para minio-init).
+  minio:
+    image: cgr.dev/chainguard/minio@sha256:2136d593beacf4461187035eca949fe49abd589d5079735025c711ca58fee0c8
+    command: ["server", "/data"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-rutasegura-root}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-local_only_change_me_root}
+      MINIO_BROWSER: "off"
+    ports:
+      - "127.0.0.1:${STORAGE_HOST_PORT:-9000}:9000"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Crea el bucket privado, la cuenta de solo lectura de la app y sube los
+  # documentos ficticios de la semilla. Idempotente.
+  minio-init:
+    image: cgr.dev/chainguard/minio@sha256:2136d593beacf4461187035eca949fe49abd589d5079735025c711ca58fee0c8
+    env_file: .env
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-rutasegura-root}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-local_only_change_me_root}
+    entrypoint: ["/bin/sh", "/scripts/minio-init.sh"]
+    volumes:
+      - ./scripts/minio-init.sh:/scripts/minio-init.sh:ro
+      - ./packages/database/fixtures/documents:/seed:ro
+    depends_on:
+      minio:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   redis_data:
+  minio_data:

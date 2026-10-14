@@ -23,6 +23,8 @@ vi.mock("./db", () => ({
 const { findUserByEmail, findUserById } = await import("./users");
 const { findShipmentByPublicId, findShipmentByTrackingNumber, claimShipment } =
   await import("./shipments");
+const { findDocumentByPublicId, listDocumentsByShipment, listDocumentsByOwner } =
+  await import("./documents");
 
 const PAYLOADS = [
   "' OR 1=1 --",
@@ -69,6 +71,27 @@ describe("repositorios: consultas parametrizadas", () => {
   it.each(PAYLOADS)("búsqueda por publicId: %s", async (payload) => {
     expectParameterized(
       await capture(() => findShipmentByPublicId(mockDb as never, payload)),
+      payload,
+    );
+  });
+
+  it.each(PAYLOADS)("documento por publicId: %s", async (payload) => {
+    expectParameterized(
+      await capture(() => findDocumentByPublicId(mockDb as never, payload)),
+      payload,
+    );
+  });
+
+  it.each(PAYLOADS)("documentos de un envío: %s", async (payload) => {
+    expectParameterized(
+      await capture(() => listDocumentsByShipment(mockDb as never, payload)),
+      payload,
+    );
+  });
+
+  it.each(PAYLOADS)("documentos de un dueño: %s", async (payload) => {
+    expectParameterized(
+      await capture(() => listDocumentsByOwner(mockDb as never, payload)),
       payload,
     );
   });

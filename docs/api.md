@@ -140,7 +140,7 @@ Consulta pública de una guía con doble dato:
 | `404`     | `tracking_not_found`: guía inexistente o dígitos incorrectos, sin distinción |
 | `429`     | Más de 5 consultas por IP o por guía en 15 min                               |
 
-La semilla de desarrollo crea `RS0000000001` (dígitos `4321`, en tránsito) y `RS0000000002` (dígitos `9876`, entregada), con datos ficticios y sin dueño.
+La semilla de desarrollo crea, con datos ficticios y sin dueño, `RS0000000001` (dígitos `4321`, en tránsito, con dos documentos) y `RS0000000002` (dígitos `9876`, entregada). `RS0000000003` (`5555`) es de la prueba smoke de documentos, y `RS0000000004` (`1111`) y `RS0000000005` (`2222`), de los flujos E2E en Chromium y WebKit.
 
 ### Envíos y agenda
 
@@ -328,6 +328,78 @@ curl -s -b alice.txt http://localhost:3000/api/v1/notifications      # unreadCou
 curl -si http://localhost:3000/api/v1/notifications                  # 401 sin cookie
 ```
 
+### Documentos
+
+Soportes de un envío en un bucket privado, descargables solo con una URL firmada de 60 s. Diseño, garantías y evidencia en [documentos.md](documentos.md).
+
+- Mismas reglas que los envíos: dueño desde la sesión, ULID públicos, `401` sin sesión y el mismo `404 not_found` para lo ajeno, lo inexistente y lo mal formado.
+- Las respuestas nunca incluyen la clave del objeto, el bucket ni el endpoint del almacenamiento.
+- Límite: 30 peticiones por minuto por usuario (`DOCUMENTS_RATE_LIMIT_*`), compartido entre listar y emitir URLs, con `429` y `Retry-After`.
+
+| Método | Ruta                                  | Efecto                                         |
+| ------ | ------------------------------------- | ---------------------------------------------- |
+| `GET`  | `/api/v1/shipments/{id}/documents`    | Lista los documentos de un envío propio        |
+| `POST` | `/api/v1/documents/{id}/download-url` | Emite una URL firmada de descarga, válida 60 s |
+
+#### `GET /api/v1/shipments/{id}/documents`
+
+`200`, del más antiguo al más reciente:
+
+```json
+{
+  "documents": [
+    {
+      "id": "01K7FQ2W3E4R5T6Y7U8I9O0P1A",
+      "shipmentId": "01K66Z8Q3W0V2R8E1XJ5N7C4TB",
+      "fileName": "Guía de transporte.pdf",
+      "mimeType": "application/pdf",
+      "sizeBytes": 589,
+      "createdAt": "2026-10-13T21:58:04.000Z"
+    }
+  ]
+}
+```
+
+#### `POST /api/v1/documents/{id}/download-url`
+
+Sin cuerpo. `200` con `Cache-Control: no-store`:
+
+```json
+{
+  "url": "http://localhost:9000/rutasegura-private/documents/n2b7v4c9x1z6m3q8?X-Amz-Algorithm=AWS4-HMAC-SHA256&…&X-Amz-Expires=60&X-Amz-Signature=…",
+  "expiresAt": "2026-10-13T22:21:46.000Z",
+  "expiresIn": 60
+}
+```
+
+| Respuesta | ¿Cuándo?                                                                        |
+| --------- | ------------------------------------------------------------------------------- |
+| `200`     | Documento de un envío propio; queda un evento `document_url_issued`             |
+| `401`     | Sin sesión                                                                      |
+| `403`     | Petición desde otro origen, rechazada en `proxy.ts`                             |
+| `404`     | `not_found`: documento ajeno, inexistente o con ULID mal formado                |
+| `429`     | Más de 30 peticiones del usuario por minuto                                     |
+| `503`     | `service_unavailable`: almacenamiento sin configurar (solo fuera de producción) |
+
+La URL se usa con una navegación normal (`GET`): el almacenamiento responde el archivo con `Content-Disposition: attachment` y `Cache-Control: no-store`. Sin firma, con la firma alterada o vencida, responde `403`. La URL nunca se registra en logs.
+
+#### Prueba de autorización negativa
+
+El smoke en Docker ([`documents.smoke.test.ts`](../apps/rutasegura/smoke/documents.smoke.test.ts)) la ejecuta en cada PR. A mano:
+
+```bash
+# Carol, dueña del envío: 200 con la URL firmada.
+curl -s -b carol.txt -X POST -H "origin: http://localhost:3000" \
+  http://localhost:3000/api/v1/documents/<ULID-del-documento>/download-url
+
+# Dave, con su propia sesión: 404, igual que con un ULID inexistente.
+curl -si -b dave.txt -X POST -H "origin: http://localhost:3000" \
+  http://localhost:3000/api/v1/documents/<ULID-del-documento>/download-url
+
+# Directo al bucket, sin firma: 403.
+curl -si http://localhost:9000/rutasegura-private/documents/<clave>
+```
+
 ### Rutas inexistentes
 
 Cualquier ruta bajo `/api/` sin handler (por ejemplo `/api/v1/no-existe`) responde con el mismo cuerpo, sea cual sea el método (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`):
@@ -364,6 +436,5 @@ Las carpetas existen, pero todavía no tienen handler: hoy responden con el 404 
 | Ruta                | Propósito               | Phase | Control principal                                  |
 | ------------------- | ----------------------- | ----- | -------------------------------------------------- |
 | `/api/v1/auth/totp` | Segundo factor opcional | 8     | TOTP con secreto cifrado y códigos de recuperación |
-| `/api/v1/documents` | Descarga de soportes    | 10    | Bucket privado y URL firmada de 60 s               |
 
 Cuando se implementen, cada una se documenta aquí con su contrato, sus errores y su prueba de autorización negativa.

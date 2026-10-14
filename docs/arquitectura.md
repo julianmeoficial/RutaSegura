@@ -26,6 +26,7 @@ flowchart TB
     subgraph datos [Persistencia]
         pg[("PostgreSQL 17")]
         rd[("Redis 7")]
+        s3[("MinIO / S3: bucket privado")]
     end
 
     nav --> proxy
@@ -36,28 +37,39 @@ flowchart TB
     servicios --> infra
     infra --> pg
     infra --> rd
+    nav -. "GET con URL firmada (60 s)" .-> s3
 ```
 
-Cada flecha que cruza hacia abajo es una frontera: todo lo que llega del navegador se valida otra vez en el servidor, y ningún camino llega a la persistencia sin pasar por `server/services`.
+Cada flecha que cruza hacia abajo es una frontera: todo lo que llega del navegador se valida otra vez en el servidor, y ningún camino llega a la persistencia sin pasar por `server/services`. La única excepción es la descarga de documentos: el navegador va directo al bucket, pero solo con una URL que `server/storage/signer.ts` firmó para el dueño y que vence a los 60 s ([documentos.md](documentos.md)).
+
+### La UI y los datos
+
+- **Server Components** (páginas de `app/(public)` y `app/(portal)`) leen con `server/services`, con la identidad de la cookie (`server/auth/current-user.ts`). Las páginas del portal llaman a `requirePortalUser()`, que redirige a `/ingresar?next=…` sin sesión; un envío ajeno o inexistente responde con `notFound()`, la misma página 404.
+- **Client Components** (`features/*`) solo mutan a través de `/api/v1` con `lib/api-client.ts`: mismo origen, `no-store`, un intento de `refresh` ante un 401 y lectura de `Retry-After` ante un 429. Después llaman a `router.refresh()` para volver a leer en el servidor.
+- El navegador nunca envía `userId`, ni la UI recibe claves de objeto o URLs permanentes.
 
 ## ¿Qué vive en cada carpeta?
 
-| Carpeta                                                         | Responsabilidad                                          | Estado                                         |
-| --------------------------------------------------------------- | -------------------------------------------------------- | ---------------------------------------------- |
-| `src/app/(public)`, `src/app/(portal)`                          | Pantallas públicas y del portal autenticado              | Reservadas para los mockups de Figma (phase 6) |
-| `src/app/api/v1/health`                                         | Health check contra PostgreSQL y Redis                   | Implementado                                   |
-| `src/app/api/[...path]`                                         | 404 JSON genérico para cualquier ruta de API sin handler | Implementado                                   |
-| `src/app/api/v1/{auth,tracking,shipments,documents}`            | Endpoints de negocio                                     | Reservados (phases 8 a 10)                     |
-| `src/features/*`                                                | UI y lógica de presentación por dominio                  | Reservado                                      |
-| `src/server/env.ts`                                             | Validación de variables con Zod                          | Implementado                                   |
-| `src/server/startup.ts`, `src/instrumentation.ts`               | Arranque que falla con configuración inválida            | Implementado                                   |
-| `src/server/logger.ts`                                          | Logs JSON sin secretos                                   | Implementado                                   |
-| `src/server/http/responses.ts`                                  | Respuestas de error uniformes                            | Implementado                                   |
-| `src/server/redis.ts`                                           | Cliente Redis                                            | Implementado                                   |
-| `src/server/services/health.ts`                                 | Chequeo de dependencias con tiempo límite                | Implementado                                   |
-| `src/server/{auth,authorization,repositories,rate-limit,audit}` | Controles de las siguientes phases                       | Reservado                                      |
-| `src/lib/security-headers.ts`                                   | Cabeceras y CSP, sin secretos                            | Implementado                                   |
-| `src/proxy.ts`                                                  | Aplica la CSP y las cabeceras por petición               | Implementado                                   |
+| Carpeta                                                         | Responsabilidad                                          | Estado                     |
+| --------------------------------------------------------------- | -------------------------------------------------------- | -------------------------- |
+| `src/app/(public)`                                              | Rastreo, ingreso, registro y panel de estados            | Implementado (diseños S06) |
+| `src/app/(portal)/portal`                                       | Mis envíos, agenda, detalle, documentos y seguridad      | Implementado (diseños S06) |
+| `src/app/api/v1/health`                                         | Health check contra PostgreSQL y Redis                   | Implementado               |
+| `src/app/api/[...path]`                                         | 404 JSON genérico para cualquier ruta de API sin handler | Implementado               |
+| `src/app/api/v1/{auth,tracking,shipments,documents}`            | Endpoints de negocio                                     | Implementado               |
+| `src/components`                                                | Componentes de UI base, cabecera y navegación            | Implementado               |
+| `src/features/*`                                                | UI y lógica de presentación por dominio                  | Implementado               |
+| `src/lib/{api-client,format}.ts`                                | Cliente de la API y formatos compartidos por la UI       | Implementado               |
+| `src/server/storage/signer.ts`                                  | Firma de URLs de descarga (SigV4, 60 s)                  | Implementado               |
+| `src/server/env.ts`                                             | Validación de variables con Zod                          | Implementado               |
+| `src/server/startup.ts`, `src/instrumentation.ts`               | Arranque que falla con configuración inválida            | Implementado               |
+| `src/server/logger.ts`                                          | Logs JSON sin secretos                                   | Implementado               |
+| `src/server/http/responses.ts`                                  | Respuestas de error uniformes                            | Implementado               |
+| `src/server/redis.ts`                                           | Cliente Redis                                            | Implementado               |
+| `src/server/services/health.ts`                                 | Chequeo de dependencias con tiempo límite                | Implementado               |
+| `src/server/{auth,authorization,audit,repositories,rate-limit}` | Sesión, propiedad, bitácora, acceso a datos y límites    | Implementado               |
+| `src/lib/security-headers.ts`                                   | Cabeceras y CSP, sin secretos                            | Implementado               |
+| `src/proxy.ts`                                                  | Aplica la CSP y las cabeceras por petición               | Implementado               |
 
 ## Límites que el código hace cumplir
 
@@ -72,5 +84,5 @@ Todo documento se renderiza en el servidor en cada petición (`await connection(
 
 ## Despliegue
 
-- **Local:** Docker Compose levanta la app, PostgreSQL y Redis ([desarrollo.md](desarrollo.md)).
-- **Producción:** imagen `standalone` de Next que corre sin root, o un único proyecto de Vercel con Root Directory `apps/rutasegura`. PostgreSQL y Redis son servicios administrados, y las migraciones corren como paso controlado del despliegue, nunca durante una petición.
+- **Local:** Docker Compose levanta la app, PostgreSQL, Redis y MinIO ([desarrollo.md](desarrollo.md)).
+- **Producción:** imagen `standalone` de Next que corre sin root, o un único proyecto de Vercel con Root Directory `apps/rutasegura`. PostgreSQL, Redis y el almacenamiento S3 compatible son servicios administrados, y las migraciones corren como paso controlado del despliegue, nunca durante una petición.

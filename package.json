@@ -27,6 +27,7 @@
     "db:generate": "pnpm --filter @rutasegura/database db:generate",
     "db:migrate": "pnpm --filter @rutasegura/database db:migrate",
     "db:seed": "pnpm --filter @rutasegura/database db:seed",
+    "db:fixtures": "pnpm --filter @rutasegura/database db:fixtures",
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down"
   },

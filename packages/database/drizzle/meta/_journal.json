@@ -36,6 +36,13 @@
       "when": 1791928778140,
       "tag": "0004_documents",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792042787171,
+      "tag": "0005_enable_rls",
+      "breakpoints": true
     }
   ]
 }

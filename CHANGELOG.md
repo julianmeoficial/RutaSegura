@@ -15,6 +15,10 @@ Todos los cambios relevantes de RutaSegura se registran aquí. El formato sigue 
 - Pantalla `/portal/avisos`: lista de avisos con título por tipo, marca "Nuevo" y botón "Marcar como leídos"; campana con contador en la cabecera y pestaña en el portal.
 - `events` en `GET /api/v1/shipments/{id}` (`shipmentDetailSchema`), con el recorrido del envío del más antiguo al más reciente; el detalle del portal lo muestra como "Recorrido".
 - Página `/ayuda` con el significado de cada estado y preguntas frecuentes.
+- Preparación del despliegue en vivo (`docs/despliegue.md`):
+  - Migración `0005_enable_rls`: Row Level Security sin políticas en las 8 tablas, para que la API REST de Supabase no exponga datos. La app, dueña de las tablas, no cambia.
+  - `pnpm db:fixtures`: sube los PDF de la semilla a un almacenamiento S3 compatible (Supabase Storage) con las mismas claves que MinIO, sin duplicar.
+  - Proyecto Supabase `rutasegura` (us-east-1) con bucket privado `rutasegura-private`, y `.env.supabase` local para migrar, sembrar y probar contra los servicios reales.
 
 ### Cambiado
 

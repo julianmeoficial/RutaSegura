@@ -133,6 +133,9 @@ importers:
 
   packages/database:
     dependencies:
+      '@aws-sdk/client-s3':
+        specifier: 3.1150.0
+        version: 3.1150.0
       drizzle-orm:
         specifier: 0.45.3
         version: 0.45.3(postgres@3.4.9)

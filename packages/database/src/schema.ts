@@ -36,7 +36,7 @@ export const users = pgTable(
     uniqueIndex("users_email_unique").on(table.email),
     check("users_email_lowercase", sql`${table.email} = lower(${table.email})`),
   ],
-);
+).enableRLS();
 
 /**
  * Una fila por refresh token emitido. Al rotar, la fila vieja queda revocada y
@@ -63,7 +63,7 @@ export const sessions = pgTable(
     index("sessions_family_idx").on(table.familyId),
     index("sessions_user_idx").on(table.userId),
   ],
-);
+).enableRLS();
 
 export const authEventType = pgEnum("auth_event_type", [
   "register_success",
@@ -96,7 +96,7 @@ export const authEvents = pgTable(
     index("auth_events_user_idx").on(table.userId, table.createdAt),
     index("auth_events_type_idx").on(table.type, table.createdAt),
   ],
-);
+).enableRLS();
 
 export const shipmentStatus = pgEnum("shipment_status", [
   "created",
@@ -162,7 +162,7 @@ export const shipments = pgTable(
       withCheck: sql`${appMode} = 'operator'`,
     }),
   ],
-);
+).enableRLS();
 
 /**
  * Columnas que referencian un envío desde otra tabla. `sql.raw` solo recibe
@@ -198,7 +198,7 @@ export const shipmentEvents = pgTable(
       withCheck: sql`${appMode} = 'operator'`,
     }),
   ],
-);
+).enableRLS();
 
 export const shipmentAuditEventType = pgEnum("shipment_audit_event_type", [
   "claimed",
@@ -238,7 +238,7 @@ export const shipmentAuditEvents = pgTable(
       withCheck: shipmentVisible("shipment_audit_events.shipment_id"),
     }),
   ],
-);
+).enableRLS();
 
 /**
  * Soportes de un envío guardados en el bucket privado. La fila solo guarda la
@@ -281,7 +281,7 @@ export const documents = pgTable(
       withCheck: sql`${appMode} = 'operator'`,
     }),
   ],
-);
+).enableRLS();
 
 export const notificationKind = pgEnum("notification_kind", [
   "shipment_scheduled",
@@ -322,4 +322,4 @@ export const notifications = pgTable(
       withCheck: sql`user_id = ${appUserId} or ${appMode} = 'operator'`,
     }),
   ],
-);
+).enableRLS();

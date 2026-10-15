@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const HEADING = "Rastrea tu envío sin exponer tus datos";
+const HEADING = "Rastrea tu envío";
 
 test("la página pinta y la CSP estricta no bloquea recursos propios", async ({ page }) => {
   const problems: string[] = [];
@@ -11,8 +11,12 @@ test("la página pinta y la CSP estricta no bloquea recursos propios", async ({ 
 
   const response = await page.goto("/");
   expect(response?.status()).toBe(200);
-  await expect(page).toHaveURL(/\/rastreo$/);
-  await expect(page.getByRole("heading", { level: 1, name: HEADING })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "¿Dónde va tu paquete?" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Número de guía")).toBeVisible();
+  // Las fuentes propias cargan bajo la CSP y la marca enlaza al inicio.
+  await expect(page.getByRole("link", { name: "RutaSegura, inicio" })).toBeVisible();
 
   const headers = response!.headers();
   const policy = headers["content-security-policy"] ?? "";
@@ -23,9 +27,12 @@ test("la página pinta y la CSP estricta no bloquea recursos propios", async ({ 
   expect(headers["cross-origin-opener-policy"]).toBe("same-origin");
   expect(headers["cross-origin-embedder-policy"]).toBe("require-corp");
 
-  // Todo script del documento lleva el nonce de la petición.
-  const scriptsWithoutNonce = await page.locator("script:not([nonce])").count();
-  expect(scriptsWithoutNonce).toBe(0);
+  // Todo script del documento servido lleva el nonce de la petición. Los chunks que
+  // Next inserta después al precargar rutas los autoriza 'strict-dynamic'.
+  const html = await response!.text();
+  const scripts = html.match(/<script\b[^>]*>/g) ?? [];
+  expect(scripts.length).toBeGreaterThan(0);
+  expect(scripts.filter((tag) => !/\snonce="[^"]+"/.test(tag))).toEqual([]);
 
   await page.waitForLoadState("networkidle");
   expect(problems).toEqual([]);

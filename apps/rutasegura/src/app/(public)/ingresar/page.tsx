@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Card, Page, PageIntro } from "@/components/ui";
+import { AuthShell } from "@/features/auth/auth-shell";
 import { LoginForm } from "@/features/auth/login-form";
 import { safeNextPath } from "@/lib/format";
 import { getCurrentUser } from "@/server/auth/current-user";
@@ -17,15 +18,16 @@ export default async function LoginPage({ searchParams }: Props) {
   if (await getCurrentUser()) redirect(next);
 
   return (
-    <Page>
-      <PageIntro
-        eyebrow="RF-14 · A07"
-        title="Inicia sesión en tu portal"
-        description="La sesión vive en cookies HttpOnly: la página nunca ve ni guarda tus tokens. Tras 5 intentos fallidos la cuenta se bloquea temporalmente."
-      />
-      <Card>
-        <LoginForm next={next} expired={nextParam !== undefined} />
-      </Card>
-    </Page>
+    <AuthShell
+      title="Inicia sesión"
+      description="Entra para ver tus envíos, agendar entregas y descargar tus documentos."
+      footer={
+        <>
+          ¿No tienes cuenta? <Link href="/registro">Crea una gratis</Link>
+        </>
+      }
+    >
+      <LoginForm next={next} expired={nextParam !== undefined} />
+    </AuthShell>
   );
 }

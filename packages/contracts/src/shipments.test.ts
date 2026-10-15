@@ -72,9 +72,13 @@ describe("respuestas de envío", () => {
     expect(parsed).not.toHaveProperty("recipientPhone");
   });
 
-  it("el detalle incluye la bitácora", () => {
+  it("el detalle incluye el recorrido y la bitácora", () => {
     const detail = shipmentDetailSchema.parse({
       ...summary,
+      events: [
+        { status: "created", city: "Bogotá", occurredAt: "2026-09-26T12:00:00Z" },
+        { status: "in_transit", city: "Medellín", occurredAt: "2026-09-27T09:00:00Z" },
+      ],
       audit: [
         { type: "claimed", fromStatus: null, toStatus: null, createdAt: "2026-09-27T12:00:00Z" },
         {
@@ -85,6 +89,11 @@ describe("respuestas de envío", () => {
         },
       ],
     });
+    expect(detail.events.map((event) => event.city)).toEqual(["Bogotá", "Medellín"]);
     expect(detail.audit.map((event) => event.type)).toEqual(["claimed", "unscheduled"]);
+  });
+
+  it("el detalle sin recorrido no es válido", () => {
+    expect(shipmentDetailSchema.safeParse({ ...summary, audit: [] }).success).toBe(false);
   });
 });

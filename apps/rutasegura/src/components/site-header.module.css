@@ -1,77 +1,356 @@
-.header {
-  width: 100%;
-  max-width: 64rem;
-  margin: 0 auto;
-  padding: 1rem 1.25rem 0;
+/* Header pill flotante de DESIGN.md §5.1: tres islas sobre tinta al 92 %. */
+
+.sentinel {
+  position: absolute;
+  top: 100px;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
 }
 
-.top {
+.header {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  z-index: 50;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--border-subtle);
+  gap: 12px;
+  width: min(920px, calc(100% - 32px));
+  height: var(--header-h);
+  padding: 0 6px 0 18px;
+  border-radius: var(--r-pill);
+  background: rgb(20 19 15 / 92%);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  color: var(--paper);
+  box-shadow: var(--shadow-float);
+  transform: translateX(-50%);
+  transition: height var(--t-ui) var(--ease);
+}
+
+.header[data-compact] {
+  height: 48px;
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
   min-height: var(--target);
-  color: var(--foreground);
-  font-weight: 700;
+  font-size: clamp(1.0625rem, 4.6vw, 1.25rem);
+  color: var(--paper);
   text-decoration: none;
+  flex: none;
 }
 
-.account {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: var(--target);
-  min-height: var(--target);
-  border-radius: var(--radius-sm);
-  color: var(--primary-strong);
+.header[data-compact] .brand {
+  font-size: 1.125rem;
 }
+
+/* Links con píldora deslizante */
 
 .nav {
-  padding: 1rem 0;
-  border-bottom: 1px solid var(--border-subtle);
+  position: relative;
+  display: none;
 }
 
-.tabs {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-}
-
-@media (min-width: 40rem) {
-  .tabs {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+@media (min-width: 64rem) {
+  .nav {
+    display: block;
   }
 }
 
-.tab {
+.links {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 2px;
+  list-style: none;
+}
+
+.indicator {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 0;
+  height: 40px;
+  margin-top: -20px;
+  border-radius: var(--r-pill);
+  background: var(--route);
+  opacity: 0;
+  transition:
+    transform var(--t-ui) var(--ease),
+    opacity var(--t-ui) var(--ease);
+}
+
+.header[data-compact] .indicator {
+  height: 36px;
+  margin-top: -18px;
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
   min-height: var(--target);
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--primary-border);
-  border-radius: var(--radius-md);
-  color: var(--foreground);
-  font-weight: 600;
-  text-align: center;
+  padding: 0 16px;
+  border-radius: var(--r-pill);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--paper) 78%, transparent);
+  white-space: nowrap;
+  text-decoration: none;
+  transition: color var(--t-ui) var(--ease);
+}
+
+.link:hover {
+  color: var(--paper);
+}
+
+.link[aria-current="page"] {
+  color: var(--route-ink);
+}
+
+/* Antes de medir (sin JavaScript), el link activo lleva la píldora él mismo. */
+.nav:not([data-measured]) .link[aria-current="page"] {
+  background: var(--route);
+}
+
+/* Acción */
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+
+.login {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target);
+  padding: 0 12px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--paper);
   text-decoration: none;
 }
 
-.tab:hover {
-  background: var(--primary-soft);
+.login:hover {
+  text-decoration: underline;
 }
 
-.tab[aria-current="page"] {
-  background: var(--primary);
-  color: var(--on-primary);
+.header[data-compact] .secondaryLabel {
+  display: none;
+}
+
+/* En pantallas estrechas «Ingresar» vive en la hoja del menú. */
+@media (max-width: 29.99rem) {
+  .login {
+    display: none;
+  }
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 18px;
+  border-radius: var(--r-pill);
+  background: var(--route);
+  color: var(--route-ink);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    transform var(--t-ui) var(--ease),
+    background-color var(--t-ui) var(--ease);
+}
+
+.cta:hover {
+  background: var(--route-hover);
+  transform: translateY(-1px);
+}
+
+.desktopOnly {
+  display: none;
+}
+
+@media (min-width: 48rem) {
+  .desktopOnly {
+    display: inline-flex;
+  }
+}
+
+.iconLink {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--target);
+  height: var(--target);
+  border-radius: var(--r-pill);
+  color: var(--paper);
+  transition: background-color var(--t-ui) var(--ease);
+}
+
+.iconLink:hover {
+  background: rgb(245 241 234 / 10%);
+}
+
+.badge {
+  position: absolute;
+  top: 6px;
+  right: 4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--r-pill);
+  background: var(--route);
+  color: var(--route-ink);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 18px;
+  text-align: center;
+}
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-pill);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.menuButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--target);
+  padding: 0 14px;
+  border-radius: var(--r-pill);
+  background: rgb(245 241 234 / 10%);
+  color: var(--paper);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+@media (min-width: 64rem) {
+  .menuButton {
+    display: none;
+  }
+}
+
+/* Hoja inferior en móvil */
+
+.sheetLayer {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  visibility: hidden;
+  transition: visibility 0s linear 260ms;
+}
+
+.sheetLayer[data-open] {
+  visibility: visible;
+  transition: visibility 0s;
+}
+
+@media (min-width: 64rem) {
+  .sheetLayer {
+    display: none;
+  }
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(20 19 15 / 40%);
+  opacity: 0;
+  transition: opacity 260ms var(--ease);
+}
+
+.sheetLayer[data-open] .backdrop {
+  opacity: 1;
+}
+
+.sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  gap: 24px;
+  padding: 32px var(--gutter) calc(32px + env(safe-area-inset-bottom));
+  border-radius: var(--r-blob) var(--r-blob) 0 0;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--shadow-float);
+  transform: translateY(100%);
+  transition: transform 260ms var(--ease);
+}
+
+.sheetLayer[data-open] .sheet {
+  transform: translateY(0);
+}
+
+.sheetLinks {
+  list-style: none;
+  display: grid;
+  gap: 4px;
+}
+
+.sheetLink {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  padding: 0 20px;
+  border-radius: var(--r-pill);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.75rem;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.sheetLink[aria-current="page"] {
+  background: var(--sand);
+}
+
+.sheetActions {
+  display: grid;
+  gap: 10px;
+}
+
+.sheetPrimary,
+.sheetSecondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  border-radius: var(--r-pill);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.sheetPrimary {
+  background: var(--route);
+  color: var(--route-ink);
+}
+
+.sheetSecondary {
+  background: var(--sand);
+  color: var(--ink);
 }

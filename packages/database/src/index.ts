@@ -10,6 +10,18 @@ type Connection = { client: postgres.Sql; db: Database };
 
 const globalForDb = globalThis as unknown as { rutaseguraDb?: Connection };
 
+const TRANSACTION_POOLER_PORT = "6543";
+
+/**
+ * El pooler de Supabase en modo transacción (puerto 6543) reparte cada
+ * transacción entre conexiones distintas: no admite sentencias preparadas y
+ * cada instancia serverless debe abrir pocas conexiones.
+ */
+export function connectionOptions(databaseUrl: string): { max: number; prepare: boolean } {
+  const pooled = new URL(databaseUrl).port === TRANSACTION_POOLER_PORT;
+  return pooled ? { max: 3, prepare: false } : { max: 10, prepare: true };
+}
+
 /**
  * Devuelve una conexión reutilizable. En desarrollo se guarda en `globalThis`
  * para que la recarga en caliente no abra un pool nuevo en cada cambio.
@@ -17,10 +29,9 @@ const globalForDb = globalThis as unknown as { rutaseguraDb?: Connection };
 export function getDatabase(databaseUrl: string): Database {
   if (!globalForDb.rutaseguraDb) {
     const client = postgres(databaseUrl, {
-      max: 10,
+      ...connectionOptions(databaseUrl),
       idle_timeout: 20,
       connect_timeout: 5,
-      prepare: true,
     });
     globalForDb.rutaseguraDb = { client, db: drizzle(client, { schema }) };
   }

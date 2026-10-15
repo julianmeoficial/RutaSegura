@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { shipmentStatusSchema, trackingRequestSchema } from "./tracking";
+import { shipmentEventSchema, shipmentStatusSchema, trackingRequestSchema } from "./tracking";
 
 /** ULID en Crockford base32: 26 caracteres, el primero como máximo `7`. */
 export const ulidSchema = z
@@ -61,7 +61,9 @@ export const shipmentAuditTypeSchema = z.enum([
 
 export type ShipmentAuditType = z.infer<typeof shipmentAuditTypeSchema>;
 
+/** Detalle para el dueño: recorrido (más antiguo primero) y bitácora de su cuenta. */
 export const shipmentDetailSchema = shipmentSummarySchema.extend({
+  events: z.array(shipmentEventSchema),
   audit: z.array(
     z.object({
       type: shipmentAuditTypeSchema,

@@ -155,7 +155,7 @@ Endpoints autenticados de la Phase 9. El usuario **reclama** una guía existente
 | -------- | --------------------------------- | ---------------------------------- |
 | `POST`   | `/api/v1/shipments/claim`         | Vincula una guía a la cuenta       |
 | `GET`    | `/api/v1/shipments`               | Lista solo los envíos del usuario  |
-| `GET`    | `/api/v1/shipments/{id}`          | Detalle y bitácora si es el dueño  |
+| `GET`    | `/api/v1/shipments/{id}`          | Detalle, recorrido y bitácora      |
 | `PATCH`  | `/api/v1/shipments/{id}/schedule` | Crea o cambia la franja de entrega |
 | `DELETE` | `/api/v1/shipments/{id}/schedule` | Cancela la franja de entrega       |
 
@@ -194,7 +194,7 @@ El reclamo cuesta lo mismo que el rastreo (siempre se calcula el HMAC) y cada fa
 
 #### `GET /api/v1/shipments/{id}`
 
-`200` con el envío y su bitácora:
+`200` con el envío, su recorrido y su bitácora:
 
 ```json
 {
@@ -202,6 +202,10 @@ El reclamo cuesta lo mismo que el rastreo (siempre se calcula el HMAC) y cada fa
   "trackingNumber": "RS0000000001",
   "status": "in_transit",
   "window": { "date": "2026-10-01", "slot": "14-16" },
+  "events": [
+    { "status": "created", "city": "Bogotá", "occurredAt": "2026-09-26T13:00:00.000Z" },
+    { "status": "in_transit", "city": "Medellín", "occurredAt": "2026-09-27T15:30:00.000Z" }
+  ],
   "audit": [
     {
       "type": "claimed",
@@ -218,6 +222,8 @@ El reclamo cuesta lo mismo que el rastreo (siempre se calcula el HMAC) y cada fa
   ]
 }
 ```
+
+`events` es el mismo recorrido que devuelve el rastreo público (estado, ciudad y fecha), del más antiguo al más reciente. `audit` son las acciones hechas desde la cuenta.
 
 #### `PATCH /api/v1/shipments/{id}/schedule`
 

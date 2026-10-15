@@ -20,22 +20,24 @@ Compose levanta la app, PostgreSQL 17, Redis 7 y MinIO (bucket privado de docume
 
 ## Scripts
 
-| Comando                                | Qué hace                                    |
-| -------------------------------------- | ------------------------------------------- |
-| `pnpm dev`                             | Servidor de desarrollo                      |
-| `pnpm build`                           | Build de producción                         |
-| `pnpm lint`                            | ESLint en todos los paquetes                |
-| `pnpm typecheck`                       | TypeScript en todos los paquetes            |
-| `pnpm test`                            | Pruebas unitarias                           |
-| `pnpm test:e2e`                        | Pruebas en Chromium, WebKit y WebKit iPhone |
-| `pnpm test:smoke`                      | Smoke de la API contra Docker               |
-| `pnpm test:e2e:flows`                  | Flujos de UI en Chromium y WebKit (Docker)  |
-| `pnpm test:smoke:ui`                   | Smoke de UI contra la imagen de producción  |
-| `./scripts/freeze-check.sh`            | Verificación completa del freeze            |
-| `pnpm format`                          | Prettier                                    |
-| `pnpm db:generate` / `pnpm db:migrate` | Migraciones                                 |
-| `pnpm db:seed`                         | Datos ficticios de desarrollo               |
-| `pnpm docker:up` / `pnpm docker:down`  | Entorno completo                            |
+| Comando                                | Qué hace                                                                 |
+| -------------------------------------- | ------------------------------------------------------------------------ |
+| `pnpm dev`                             | Servidor de desarrollo                                                   |
+| `pnpm build`                           | Build de producción                                                      |
+| `pnpm lint`                            | ESLint en todos los paquetes                                             |
+| `pnpm typecheck`                       | TypeScript en todos los paquetes                                         |
+| `pnpm test`                            | Pruebas unitarias                                                        |
+| `pnpm test:e2e`                        | Pruebas en Chromium, WebKit y WebKit iPhone                              |
+| `pnpm test:smoke`                      | Smoke de la API contra Docker                                            |
+| `pnpm test:e2e:flows`                  | Flujos de UI en Chromium y WebKit (Docker)                               |
+| `pnpm test:smoke:ui`                   | Smoke de UI contra la imagen de producción                               |
+| `./scripts/freeze-check.sh`            | Verificación completa del freeze                                         |
+| `pnpm pentest:up` / `pnpm pentest:dev` | Entorno aislado de pentest en `127.0.0.1:3100` (producción o dev server) |
+| `pnpm pentest:restore`                 | Restaura el snapshot `pre-pentest`                                       |
+| `pnpm format`                          | Prettier                                                                 |
+| `pnpm db:generate` / `pnpm db:migrate` | Migraciones                                                              |
+| `pnpm db:seed`                         | Datos ficticios de desarrollo                                            |
+| `pnpm docker:up` / `pnpm docker:down`  | Entorno completo                                                         |
 
 ## Documentación
 
@@ -49,8 +51,10 @@ Compose levanta la app, PostgreSQL 17, Redis 7 y MinIO (bucket privado de docume
 | [Documentos](docs/documentos.md)                                    | Bucket privado, URL firmada de 60 s y evidencia de que no es público          |
 | [Compatibilidad de navegadores](docs/compatibilidad-navegadores.md) | WebKit y Chromium como criterio de aceptación                                 |
 | [Desarrollo](docs/desarrollo.md)                                    | Entorno local, ramas (`feat/`, `fix/`, `hotfix/`, `chore/`, `docs/`), PR y CI |
+| [Datos de prueba](docs/datos-de-prueba.md)                          | Guías ficticias, cuentas demo para iniciar sesión y límites                   |
 | [Smoke de UI](docs/smoke-ui.md)                                     | Checklist de flujos críticos y registro de defectos                           |
 | [Freeze para pentest](docs/pentest-freeze.md)                       | Tag, rama, alcance, objetivo, datos de prueba y checklist firmado por la SM   |
+| [Entorno de pentest](docs/entorno-pentest.md)                       | Stack aislado con datos ficticios, snapshot restaurable y declaración ética   |
 | [CHANGELOG](CHANGELOG.md)                                           | Historial de versiones                                                        |
 
 ## Equipo

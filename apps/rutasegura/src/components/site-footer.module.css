@@ -1,0 +1,205 @@
+/* Footer de DESIGN.md §5.9: hoja de tinta con wordmark gigante recortado. */
+
+.footer {
+  position: relative;
+  margin-top: 64px;
+  border-radius: 48px 48px 0 0;
+  background: var(--ink);
+  color: var(--paper);
+  overflow: hidden;
+}
+
+.inner {
+  position: relative;
+  z-index: 1;
+  width: var(--container);
+  margin: 0 auto;
+  padding: clamp(64px, 9vw, 112px) var(--gutter) 40px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(48px, 7vw, 88px);
+}
+
+.top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 32px;
+  align-items: end;
+}
+
+@media (min-width: 64rem) {
+  .top {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  }
+}
+
+.question {
+  max-width: 12ch;
+  text-wrap: balance;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--text-h2);
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+}
+
+.track {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  min-width: 0;
+}
+
+.trackLabel {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--paper) 72%, transparent);
+}
+
+.trackPill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border-radius: var(--r-pill);
+  background: rgb(245 241 234 / 9%);
+}
+
+.trackPill:focus-within {
+  background: rgb(245 241 234 / 14%);
+}
+
+.trackInput {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 1.0625rem;
+  letter-spacing: 0.02em;
+}
+
+.trackInput::placeholder {
+  color: color-mix(in srgb, var(--paper) 40%, transparent);
+}
+
+.trackButton {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 22px;
+  border-radius: var(--r-pill);
+  background: var(--route);
+  color: var(--route-ink);
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    transform var(--t-ui) var(--ease),
+    background-color var(--t-ui) var(--ease);
+}
+
+.trackButton:hover {
+  background: var(--route-hover);
+  transform: translateY(-1px);
+}
+
+.trackHint {
+  font-size: 0.875rem;
+  color: color-mix(in srgb, var(--paper) 60%, transparent);
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 40px 24px;
+}
+
+@media (min-width: 48rem) {
+  .columns {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.column {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+
+.columnTitle {
+  font-size: var(--text-label);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--paper) 58%, transparent);
+}
+
+.columnLinks {
+  list-style: none;
+  display: grid;
+  gap: 4px;
+}
+
+.columnLinks a,
+.base a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target);
+  color: var(--paper);
+  text-decoration: none;
+}
+
+.columnLinks a:hover,
+.base a:hover {
+  text-decoration: underline;
+}
+
+/* Pie mínimo: año a la izquierda, estado del servicio a la derecha. */
+.base {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 24px;
+  font-size: 0.875rem;
+  color: color-mix(in srgb, var(--paper) 72%, transparent);
+}
+
+.health {
+  gap: 8px;
+}
+
+.healthDot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: #3fbf7f;
+}
+
+.mark {
+  position: relative;
+  height: clamp(110px, 17vw, 300px);
+  margin-top: -24px;
+  overflow: hidden;
+}
+
+.markText {
+  position: absolute;
+  left: 50%;
+  bottom: -0.2em;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 22vw;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: color-mix(in srgb, var(--sand) 9%, transparent);
+  white-space: nowrap;
+  transform: translateX(-50%);
+  user-select: none;
+}

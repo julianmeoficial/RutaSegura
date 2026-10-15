@@ -2,11 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { IconLogout } from "@/components/icons";
 import { Button } from "@/components/ui";
 import { apiRequest } from "@/lib/api-client";
 
-/** Revoca la sesión en el servidor (y con ella el JWT vigente) y vuelve al login. */
-export function LogoutButton({ variant = "soft" }: { variant?: "soft" | "danger" }) {
+/** Cierra la sesión en el servidor, que deja de aceptar el acceso vigente, y vuelve al login. */
+export function LogoutButton({ variant = "soft" }: { variant?: "soft" | "danger" | "ghost" }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
 
@@ -18,7 +19,8 @@ export function LogoutButton({ variant = "soft" }: { variant?: "soft" | "danger"
   }
 
   return (
-    <Button variant={variant} onClick={onClick} disabled={pending}>
+    <Button variant={variant} onClick={onClick} disabled={pending} loading={pending}>
+      {pending ? null : <IconLogout size={18} />}
       {pending ? "Cerrando…" : "Cerrar sesión"}
     </Button>
   );

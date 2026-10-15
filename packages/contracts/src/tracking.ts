@@ -26,17 +26,20 @@ export const shipmentStatusSchema = z.enum([
 
 export type ShipmentStatus = z.infer<typeof shipmentStatusSchema>;
 
+/** Un paso del recorrido: estado, ciudad y momento. */
+export const shipmentEventSchema = z.object({
+  status: shipmentStatusSchema,
+  city: z.string(),
+  occurredAt: z.iso.datetime(),
+});
+
+export type ShipmentEvent = z.infer<typeof shipmentEventSchema>;
+
 /** Solo estado y recorrido: nunca nombre, teléfono ni dirección del destinatario. */
 export const trackingResponseSchema = z.object({
   trackingNumber: z.string(),
   status: shipmentStatusSchema,
-  events: z.array(
-    z.object({
-      status: shipmentStatusSchema,
-      city: z.string(),
-      occurredAt: z.iso.datetime(),
-    }),
-  ),
+  events: z.array(shipmentEventSchema),
 });
 
 export type TrackingResponse = z.infer<typeof trackingResponseSchema>;

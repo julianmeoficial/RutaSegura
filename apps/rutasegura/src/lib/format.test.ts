@@ -5,6 +5,7 @@ import {
   countdownLabel,
   dateLabel,
   isSlotPast,
+  maskTracking,
   safeNextPath,
   slotLabel,
   upcomingBusinessDays,
@@ -54,5 +55,12 @@ describe("etiquetas", () => {
     expect(countdownLabel(120)).toBe("02:00");
     expect(countdownLabel(59.2)).toBe("01:00");
     expect(countdownLabel(-3)).toBe("00:00");
+  });
+});
+
+describe("maskTracking", () => {
+  it("deja solo el prefijo y los últimos 4 dígitos", () => {
+    expect(maskTracking("RS0000000009")).toBe("RS-****-0009");
+    expect(maskTracking("RS1234567890")).not.toContain("123456");
   });
 });

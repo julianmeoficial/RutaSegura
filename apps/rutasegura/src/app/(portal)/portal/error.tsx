@@ -16,6 +16,7 @@ export default function PortalError({
       onRetry={reset}
       homeHref="/portal"
       homeLabel="Ir a Mis envíos"
+      embedded
     />
   );
 }

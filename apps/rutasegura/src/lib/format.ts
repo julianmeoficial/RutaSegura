@@ -1,6 +1,7 @@
 import type {
   DeliverySlot,
   DeliveryWindow,
+  NotificationKind,
   ShipmentAuditType,
   ShipmentStatus,
 } from "@rutasegura/contracts";
@@ -8,15 +9,67 @@ import type {
 /** America/Bogota es UTC-5 todo el año. */
 export const TIME_ZONE = "America/Bogota";
 
-type Tone = "success" | "warning" | "danger" | "neutral" | "info";
+type Tone = "success" | "warning" | "danger" | "neutral" | "route";
 
 export const STATUS_LABEL: Record<ShipmentStatus, { label: string; tone: Tone }> = {
-  created: { label: "Creado", tone: "info" },
-  in_transit: { label: "En tránsito", tone: "success" },
-  out_for_delivery: { label: "En reparto", tone: "success" },
-  delivered: { label: "Entregado", tone: "neutral" },
-  exception: { label: "Novedad", tone: "danger" },
+  created: { label: "Registrado", tone: "neutral" },
+  in_transit: { label: "En tránsito", tone: "neutral" },
+  out_for_delivery: { label: "En reparto", tone: "route" },
+  delivered: { label: "Entregado", tone: "success" },
+  exception: { label: "Novedad", tone: "warning" },
 };
+
+/** Guía enmascarada para vistas públicas: "RS0000000009" → "RS-****-0009". */
+export function maskTracking(trackingNumber: string): string {
+  return `${trackingNumber.slice(0, 2)}-****-${trackingNumber.slice(-4)}`;
+}
+
+/** Titular y explicación de cada estado, en el lenguaje de quien espera un paquete. */
+export const STATUS_INFO: Record<ShipmentStatus, { headline: string; description: string }> = {
+  created: {
+    headline: "Recibimos tu envío",
+    description: "El paquete quedó registrado y pronto saldrá hacia su destino.",
+  },
+  in_transit: {
+    headline: "Tu envío va en camino",
+    description: "El paquete se mueve entre nuestras sedes rumbo a la ciudad de entrega.",
+  },
+  out_for_delivery: {
+    headline: "Llega hoy",
+    description: "Un repartidor ya lleva tu paquete. Ten a mano un documento para recibirlo.",
+  },
+  delivered: {
+    headline: "Entregado",
+    description: "El paquete llegó a su destino. Gracias por confiar en RutaSegura.",
+  },
+  exception: {
+    headline: "Tu envío tiene una novedad",
+    description:
+      "Hubo un inconveniente en el camino y lo estamos resolviendo. Te avisaremos apenas avance.",
+  },
+};
+
+/** Texto de cada evento del recorrido. */
+export const EVENT_LABEL: Record<ShipmentStatus, string> = {
+  created: "Envío registrado",
+  in_transit: "En tránsito",
+  out_for_delivery: "Salió a reparto",
+  delivered: "Entregado",
+  exception: "Novedad en la entrega",
+};
+
+export const PROGRESS_STEPS: { status: ShipmentStatus; label: string }[] = [
+  { status: "created", label: "Registrado" },
+  { status: "in_transit", label: "En camino" },
+  { status: "out_for_delivery", label: "En reparto" },
+  { status: "delivered", label: "Entregado" },
+];
+
+/** Paso alcanzado (0 a 3). Una novedad ocurre en el camino: se muestra en el paso 1. */
+export function progressStep(status: ShipmentStatus): number {
+  if (status === "exception") return 1;
+  return PROGRESS_STEPS.findIndex((step) => step.status === status);
+}
 
 export const AUDIT_LABEL: Record<ShipmentAuditType, string> = {
   claimed: "Envío vinculado a tu cuenta",
@@ -25,6 +78,14 @@ export const AUDIT_LABEL: Record<ShipmentAuditType, string> = {
   unscheduled: "Franja cancelada",
   status_changed: "Cambio de estado",
   document_url_issued: "Enlace de descarga generado",
+};
+
+/** Título de cada aviso. Nunca lleva datos del envío: el detalle se ve dentro del envío. */
+export const NOTIFICATION_LABEL: Record<NotificationKind, string> = {
+  shipment_scheduled: "Entrega agendada",
+  shipment_rescheduled: "Entrega reprogramada",
+  shipment_unscheduled: "Agenda cancelada",
+  shipment_status_changed: "Tu envío cambió de estado",
 };
 
 export const DELIVERY_SLOTS: DeliverySlot[] = ["08-10", "10-12", "12-14", "14-16", "16-18"];
@@ -57,6 +118,16 @@ const MONTHS = [
 export function calendarDateLabel(date: string): string {
   const day = new Date(`${date}T00:00:00Z`);
   return `${WEEKDAYS[day.getUTCDay()]}, ${day.getUTCDate()} de ${MONTHS[day.getUTCMonth()]}`;
+}
+
+/** Fecha `YYYY-MM-DD` en partes cortas para una tarjeta de calendario: "lun", 13, "oct". */
+export function calendarDayParts(date: string): { weekday: string; day: number; month: string } {
+  const day = new Date(`${date}T00:00:00Z`);
+  return {
+    weekday: WEEKDAYS[day.getUTCDay()]!.slice(0, 3),
+    day: day.getUTCDate(),
+    month: MONTHS[day.getUTCMonth()]!.slice(0, 3),
+  };
 }
 
 export function windowLabel(window: DeliveryWindow): string {

@@ -4,6 +4,38 @@ Todos los cambios relevantes de RutaSegura se registran aquí. El formato sigue 
 
 ## [Unreleased](https://github.com/julianmeoficial/RutaSegura/compare/v0.4.0-pentest...HEAD)
 
+### Añadido
+
+- Entorno aislado para ensayar el pentest (`docs/entorno-pentest.md`):
+  - `compose.pentest.yaml` y `compose.pentest.dev.yaml`: proyecto `rutasegura-pentest` con `.env.pentest` y secretos propios, app en `127.0.0.1:3100` y MinIO en `127.0.0.1:9100`, PostgreSQL y Redis sin puertos y en una red sin salida a internet.
+  - `scripts/pentest-env.sh` y los alias `pnpm pentest:up`, `pentest:dev`, `pentest:snapshot`, `pentest:restore`, `pentest:status` y `pentest:down`: modo runner o dev server con recarga, cuentas de prueba sembradas por la API, verificación de datos ficticios y snapshots de los volúmenes con manifest y SHA-256.
+  - Declaración ética y checklist con firmas del equipo.
+- Datos de prueba unificados en `docs/datos-de-prueba.md`: guías, dígitos, cuentas, límites y cómo reiniciar. Las tablas de `pentest-freeze.md` y `entorno-pentest.md` ahora enlazan ahí.
+- Semilla: guías RS0000000009 a RS0000000012 (en reparto, entregado, novedad y creado) con recorridos por varias ciudades y sus PDF, y las cuentas demo `ana.demo` y `luis.demo` `@rutasegura.test`, con contraseña pública documentada, guías vinculadas y un aviso sin leer.
+- Pantalla `/portal/avisos`: lista de avisos con título por tipo, marca "Nuevo" y botón "Marcar como leídos"; campana con contador en la cabecera y pestaña en el portal.
+- `events` en `GET /api/v1/shipments/{id}` (`shipmentDetailSchema`), con el recorrido del envío del más antiguo al más reciente; el detalle del portal lo muestra como "Recorrido".
+- Página `/ayuda` con el significado de cada estado y preguntas frecuentes.
+
+### Cambiado
+
+- Reconstrucción de la interfaz según `DESIGN.md`, con lenguaje para clientes:
+  - Sistema visual: papel, arena y tinta con un solo acento naranja (`--route`), sin bordes, cajas ni sombras salvo en el header y las capas abiertas; radios solo pill, 40 px o 0. Tipografías Bricolage Grotesque (titulares), Geist (interfaz) y Geist Mono (datos). Íconos Lucide a 20 px y trazo 1,75; escenas con GSAP. `.cursorrules` fija CSS Modules, GSAP y Lucide, y prohíbe estilos en línea por la CSP.
+  - Header pill flotante en tinta con píldora activa que se desliza, compactado al hacer scroll, campana y avatar con sesión, y hoja inferior en móvil. Footer en tinta con campo de rastreo ("Tu guía"), columnas, wordmark gigante y enlace al estado del servicio.
+  - Portada "¿Dónde va tu paquete?" con la ruta animada, formulario en una fila, banda arena con vista de ejemplo del portal, "Cómo funciona" en tres pasos con un punto que avanza por la ruta al hacer scroll (ScrollTrigger) y banda tinta con la demo de datos enmascarados.
+  - Rastreo público con la guía enmascarada (`RS-****-0009`, `maskTracking`), ruta con paradas y un punto que avanza hasta el estado actual, recorrido y aviso para vincular el envío. La guía completa solo se ve dentro del portal.
+  - Ayuda con estados, preguntas en píldoras y secciones de privacidad y términos. Ingreso y registro sobre papel con panel en tinta. 404 y error como bandas "Fuera de ruta" y "Desvío".
+  - Portal con navegación en píldora, número grande de envíos en camino, próxima entrega en tinta, filas pill por envío (la guía enlaza al detalle), chips de día y franja en la agenda, documentos, avisos y seguridad sin cajas.
+  - Estados de carga en forma de pill y animaciones solo de `transform` y `opacity`, que respetan `prefers-reduced-motion`.
+- Simetría y detalle en el responsive:
+  - Rejilla única: tokens `--container`, `--band-pad`, `--space-section` y `--page-top`, y cortes unificados en 30, 48 y 64 rem. Las bandas, el header, el footer y las pantallas internas comparten bordes y rellenos, y las composiciones 7/5 se mantienen sin recortar contenido.
+  - Portada: el titular "¿Dónde va tu paquete?" se escala sin cortarse ni tapar el formulario, y la ruta va en su propia franja debajo. La vista de ejemplo del portal se adapta a su ancho (container queries). "Cómo funciona" pasa a tres pasos iguales desde 64 rem y apilados en móvil. El titular conserva su nombre accesible exacto.
+  - Barra de progreso con las etiquetas bajo cada parada, pestañas del portal de ancho completo, ciudad y fecha con separación clara (apiladas en móvil), enlaces tipo texto alineados con la columna, y header con los enlaces en una sola línea.
+  - Ortografía y puntuación: tildes ("últimos", "dígitos", "Aún", "Después"), comas tras los conectores y comillas latinas en los textos de ayuda, rastreo, agenda y seguridad.
+- Base de datos: con el pooler de Supabase en modo transacción (puerto 6543) la conexión desactiva las sentencias preparadas y abre como máximo 3 conexiones por instancia, para desplegar en Vercel. Con cualquier otro puerto se mantiene igual.
+- `/estados` redirige de forma permanente a `/ayuda`.
+- El portal no tiene `loading.tsx`: el streaming hacía que `notFound()` respondiera 200 y rompía el 404 uniforme.
+- Pruebas: los e2e y los smoke de UI siguen los nuevos títulos, verifican que el rastreo público muestre la guía enmascarada y no la completa, comprueban avisos y recorrido, y la verificación de nonce lee el HTML del servidor en lugar de los scripts del DOM. El flujo crítico espera a que termine `router.refresh()` tras vincular una guía antes de navegar, porque WebKit cancelaba la petición en curso.
+
 ## [0.4.0](https://github.com/julianmeoficial/RutaSegura/compare/acd29ee...v0.4.0-pentest) - 2026-10-13
 
 Versión congelada para el pentest: sprints 1 a 3 e integración del frontend con la API. El tag `v0.4.0-pentest` y la rama `release/pentest-v0.4.0` se crean con `./scripts/freeze-check.sh --tag` una vez hecho el commit; el alcance y el checklist están en [docs/pentest-freeze.md](docs/pentest-freeze.md).

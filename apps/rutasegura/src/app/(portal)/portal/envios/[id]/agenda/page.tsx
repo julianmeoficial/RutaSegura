@@ -1,78 +1,85 @@
 import type { Metadata } from "next";
-import {
-  Alert,
-  ButtonLink,
-  Card,
-  CardHeader,
-  CardTitle,
-  Chip,
-  Muted,
-  PageIntro,
-} from "@/components/ui";
+import Link from "next/link";
+import { IconArrowLeft, IconCheck } from "@/components/icons";
+import { Alert, ButtonLink, Mono, PageIntro, Section } from "@/components/ui";
+import styles from "@/features/portal/portal.module.css";
 import { ScheduleForm } from "@/features/schedules/schedule-form";
 import { AuditTimeline } from "@/features/shipments/audit-timeline";
-import { STATUS_LABEL, windowLabel } from "@/lib/format";
+import { canSchedule } from "@/features/shipments/shipment-list";
+import { STATUS_LABEL, calendarDateLabel, slotLabel } from "@/lib/format";
 import { requirePortalUser } from "@/server/auth/current-user";
 import { loadOwnedShipment } from "@/server/portal/load";
 
-export const metadata: Metadata = { title: "Agenda" };
+export const metadata: Metadata = { title: "Agendar entrega" };
 
 type Props = { params: Promise<{ id: string }> };
-
-const LOCKED = new Set(["out_for_delivery", "delivered"]);
 
 export default async function ShipmentAgendaPage({ params }: Props) {
   const { id } = await params;
   const user = await requirePortalUser(`/portal/envios/${encodeURIComponent(id)}/agenda`);
   const { shipment } = await loadOwnedShipment(id, user.id, "portal.shipment_agenda");
-  const locked = LOCKED.has(shipment.status);
 
   return (
     <>
+      <Link href={`/portal/envios/${shipment.id}`} className={styles.back}>
+        <IconArrowLeft size={18} />
+        Envío {shipment.trackingNumber}
+      </Link>
       <PageIntro
-        eyebrow="RF-07 / RF-08 · A01 / A09"
-        title="Agenda una franja disponible"
-        description="Solo aparece el selector después de que el servidor verifica que el envío pertenece a la sesión activa."
+        eyebrow={<Mono>Guía {shipment.trackingNumber}</Mono>}
+        title={shipment.window ? "Cambia tu entrega" : "¿Cuándo quieres recibirlo?"}
+        description="Elige un día hábil y una franja de dos horas. Puedes cambiarla mientras el paquete no haya salido a reparto."
       />
 
-      <Card labelledBy="agenda-shipment">
-        <CardHeader>
-          <div>
-            <Muted>Envío</Muted>
-            <CardTitle id="agenda-shipment">{shipment.trackingNumber}</CardTitle>
-          </div>
-          <Chip tone="success" dot={false}>
-            Propiedad verificada
-          </Chip>
-        </CardHeader>
-        {locked ? (
-          <>
-            <Alert tone="warning">
-              El envío está {STATUS_LABEL[shipment.status].label.toLowerCase()}: ya no se puede
-              agendar ni reprogramar.
-            </Alert>
-            <ButtonLink href={`/portal/envios/${shipment.id}`}>Volver al detalle</ButtonLink>
-          </>
-        ) : (
-          <ScheduleForm
-            shipmentId={shipment.id}
-            current={shipment.window}
-            nowIso={new Date().toISOString()}
-          />
-        )}
-      </Card>
+      <div className={styles.detail}>
+        <div className={styles.detailMain}>
+          {canSchedule(shipment) ? (
+            <ScheduleForm
+              shipmentId={shipment.id}
+              current={shipment.window}
+              nowIso={new Date().toISOString()}
+            />
+          ) : (
+            <>
+              <Alert tone="warning">
+                Este envío está {STATUS_LABEL[shipment.status].label.toLowerCase()}, así que ya no
+                se puede agendar ni cambiar la entrega.
+              </Alert>
+              <div>
+                <ButtonLink href={`/portal/envios/${shipment.id}`}>Volver al envío</ButtonLink>
+              </div>
+            </>
+          )}
+        </div>
 
-      <Card tone="info" labelledBy="agenda-confirmation">
-        <CardTitle id="agenda-confirmation">Confirmación</CardTitle>
-        <Muted>
-          {shipment.window ? windowLabel(shipment.window) : "Todavía no hay franja confirmada."}
-        </Muted>
-        <Alert tone="warning">
-          Cambiar la franja crea un nuevo evento; no sobrescribe el historial.
-        </Alert>
-        <CardTitle level={3}>Actividad reciente</CardTitle>
-        <AuditTimeline audit={shipment.audit} limit={5} />
-      </Card>
+        <div className={styles.detailSide}>
+          <section
+            className={styles.delivery}
+            data-set={shipment.window ? "" : undefined}
+            aria-labelledby="agenda-confirmation"
+          >
+            <h2 id="agenda-confirmation" className={styles.deliveryLabel}>
+              Tu entrega
+            </h2>
+            {shipment.window ? (
+              <div className={styles.when} key={`${shipment.window.date}-${shipment.window.slot}`}>
+                <span className={styles.whenIcon}>
+                  <IconCheck size={22} />
+                </span>
+                <div>
+                  <p className={styles.whenDate}>{calendarDateLabel(shipment.window.date)}</p>
+                  <p className={styles.whenSlot}>De {slotLabel(shipment.window.slot)}</p>
+                </div>
+              </div>
+            ) : (
+              <p className={styles.deliveryText}>Todavía no has elegido una franja.</p>
+            )}
+          </section>
+          <Section id="agenda-activity" title="Cambios recientes">
+            <AuditTimeline audit={shipment.audit} limit={5} />
+          </Section>
+        </div>
+      </div>
     </>
   );
 }

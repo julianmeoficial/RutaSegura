@@ -1,57 +1,50 @@
-import Link from "next/link";
-import { MainNav } from "./main-nav";
-import styles from "./site-header.module.css";
+import { unstable_rethrow } from "next/navigation";
+import type { AuthUser } from "@rutasegura/contracts";
+import { getCurrentUser } from "@/server/auth/current-user";
+import { listNotificationsForUser } from "@/server/services/notifications";
+import { HeaderBar } from "./header-bar";
 
-export function Logo({ gradientId = "rs-logo" }: { gradientId?: string }) {
-  return (
-    <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false">
-      <defs>
-        <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#38bdf8" />
-          <stop offset="1" stopColor="#1d63b4" />
-        </linearGradient>
-      </defs>
-      <rect width="28" height="28" rx="7" fill={`url(#${gradientId})`} />
-      <path
-        d="M14 6.5 20 9v4.6c0 3.7-2.5 6.6-6 7.9-3.5-1.3-6-4.2-6-7.9V9l6-2.5Z"
-        fill="none"
-        stroke="#fff"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path d="m11 14 2.2 2.2L17.2 12" fill="none" stroke="#fff" strokeWidth="1.8" />
-    </svg>
-  );
+export function firstName(fullName: string): string {
+  return fullName.trim().split(/\s+/)[0] ?? fullName;
 }
 
-function LockIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <rect x="4.5" y="10.5" width="15" height="10" rx="2" fill="#1d63b4" />
-      <path
-        d="M8 10.5V8a4 4 0 0 1 8 0v2.5"
-        fill="none"
-        stroke="#111418"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
+export function initials(fullName: string): string {
+  const letters = fullName
+    .split(/\s+/)
+    .map((part) => part.match(/\p{L}/u)?.[0] ?? "")
+    .filter(Boolean);
+  return ((letters[0] ?? "") + (letters.length > 1 ? letters.at(-1)! : "")).toUpperCase() || "?";
 }
 
-export function SiteHeader() {
+/**
+ * Sesión y avisos sin leer para la cabecera. Si la base no responde, la
+ * cabecera se pinta como visitante: el error lo muestra la página, no ella.
+ */
+async function headerSession(): Promise<{ user: AuthUser; unread: number } | null> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return null;
+    const { unreadCount } = await listNotificationsForUser(user.id, 1);
+    return { user, unread: unreadCount };
+  } catch (error) {
+    unstable_rethrow(error);
+    return null;
+  }
+}
+
+export async function SiteHeader() {
+  const session = await headerSession();
   return (
-    <header className={styles.header}>
-      <div className={styles.top}>
-        <Link href="/rastreo" className={styles.brand}>
-          <Logo />
-          RutaSegura
-        </Link>
-        <Link href="/portal" className={styles.account} aria-label="Mi cuenta">
-          <LockIcon />
-        </Link>
-      </div>
-      <MainNav />
-    </header>
+    <HeaderBar
+      session={
+        session
+          ? {
+              firstName: firstName(session.user.fullName),
+              initials: initials(session.user.fullName),
+              unread: session.unread,
+            }
+          : null
+      }
+    />
   );
 }

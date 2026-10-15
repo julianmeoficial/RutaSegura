@@ -50,26 +50,26 @@ Cada flecha que cruza hacia abajo es una frontera: todo lo que llega del navegad
 
 ## ¿Qué vive en cada carpeta?
 
-| Carpeta                                                         | Responsabilidad                                          | Estado                     |
-| --------------------------------------------------------------- | -------------------------------------------------------- | -------------------------- |
-| `src/app/(public)`                                              | Rastreo, ingreso, registro y panel de estados            | Implementado (diseños S06) |
-| `src/app/(portal)/portal`                                       | Mis envíos, agenda, detalle, documentos y seguridad      | Implementado (diseños S06) |
-| `src/app/api/v1/health`                                         | Health check contra PostgreSQL y Redis                   | Implementado               |
-| `src/app/api/[...path]`                                         | 404 JSON genérico para cualquier ruta de API sin handler | Implementado               |
-| `src/app/api/v1/{auth,tracking,shipments,documents}`            | Endpoints de negocio                                     | Implementado               |
-| `src/components`                                                | Componentes de UI base, cabecera y navegación            | Implementado               |
-| `src/features/*`                                                | UI y lógica de presentación por dominio                  | Implementado               |
-| `src/lib/{api-client,format}.ts`                                | Cliente de la API y formatos compartidos por la UI       | Implementado               |
-| `src/server/storage/signer.ts`                                  | Firma de URLs de descarga (SigV4, 60 s)                  | Implementado               |
-| `src/server/env.ts`                                             | Validación de variables con Zod                          | Implementado               |
-| `src/server/startup.ts`, `src/instrumentation.ts`               | Arranque que falla con configuración inválida            | Implementado               |
-| `src/server/logger.ts`                                          | Logs JSON sin secretos                                   | Implementado               |
-| `src/server/http/responses.ts`                                  | Respuestas de error uniformes                            | Implementado               |
-| `src/server/redis.ts`                                           | Cliente Redis                                            | Implementado               |
-| `src/server/services/health.ts`                                 | Chequeo de dependencias con tiempo límite                | Implementado               |
-| `src/server/{auth,authorization,audit,repositories,rate-limit}` | Sesión, propiedad, bitácora, acceso a datos y límites    | Implementado               |
-| `src/lib/security-headers.ts`                                   | Cabeceras y CSP, sin secretos                            | Implementado               |
-| `src/proxy.ts`                                                  | Aplica la CSP y las cabeceras por petición               | Implementado               |
+| Carpeta                                                         | Responsabilidad                                             | Estado                     |
+| --------------------------------------------------------------- | ----------------------------------------------------------- | -------------------------- |
+| `src/app/(public)`                                              | Portada, rastreo, ingreso, registro y ayuda                 | Implementado (diseños S06) |
+| `src/app/(portal)/portal`                                       | Mis envíos, agenda, detalle, documentos, avisos y seguridad | Implementado (diseños S06) |
+| `src/app/api/v1/health`                                         | Health check contra PostgreSQL y Redis                      | Implementado               |
+| `src/app/api/[...path]`                                         | 404 JSON genérico para cualquier ruta de API sin handler    | Implementado               |
+| `src/app/api/v1/{auth,tracking,shipments,documents}`            | Endpoints de negocio                                        | Implementado               |
+| `src/components`                                                | Componentes de UI base, cabecera y navegación               | Implementado               |
+| `src/features/*`                                                | UI y lógica de presentación por dominio                     | Implementado               |
+| `src/lib/{api-client,format}.ts`                                | Cliente de la API y formatos compartidos por la UI          | Implementado               |
+| `src/server/storage/signer.ts`                                  | Firma de URLs de descarga (SigV4, 60 s)                     | Implementado               |
+| `src/server/env.ts`                                             | Validación de variables con Zod                             | Implementado               |
+| `src/server/startup.ts`, `src/instrumentation.ts`               | Arranque que falla con configuración inválida               | Implementado               |
+| `src/server/logger.ts`                                          | Logs JSON sin secretos                                      | Implementado               |
+| `src/server/http/responses.ts`                                  | Respuestas de error uniformes                               | Implementado               |
+| `src/server/redis.ts`                                           | Cliente Redis                                               | Implementado               |
+| `src/server/services/health.ts`                                 | Chequeo de dependencias con tiempo límite                   | Implementado               |
+| `src/server/{auth,authorization,audit,repositories,rate-limit}` | Sesión, propiedad, bitácora, acceso a datos y límites       | Implementado               |
+| `src/lib/security-headers.ts`                                   | Cabeceras y CSP, sin secretos                               | Implementado               |
+| `src/proxy.ts`                                                  | Aplica la CSP y las cabeceras por petición                  | Implementado               |
 
 ## Límites que el código hace cumplir
 

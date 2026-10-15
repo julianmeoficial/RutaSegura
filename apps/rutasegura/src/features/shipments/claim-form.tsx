@@ -3,15 +3,17 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { claimRequestSchema, type ShipmentSummary } from "@rutasegura/contracts";
-import { Actions, Alert, Button, Field, Form } from "@/components/ui";
+import { IconChevronDown, IconPlus } from "@/components/icons";
+import { Alert, Button, Field, Form } from "@/components/ui";
 import { apiRequest } from "@/lib/api-client";
 import {
   ApiErrorAlert,
   useRateLimitActive,
   type ApiFailure,
 } from "@/features/shared/api-error-alert";
+import styles from "@/features/portal/portal.module.css";
 
-/** Vincula una guía existente a la cuenta con el mismo doble dato del rastreo. */
+/** Agrega una guía existente a la cuenta con la guía y los 4 dígitos, igual que el rastreo. */
 export function ClaimForm() {
   const router = useRouter();
   const [trackingNumber, setTrackingNumber] = useState("");
@@ -51,31 +53,34 @@ export function ClaimForm() {
   }
 
   return (
-    <Form onSubmit={onSubmit} label="Vincular una guía">
-      <Field
-        id="claim-tracking"
-        label="Número de guía"
-        autoComplete="off"
-        autoCapitalize="characters"
-        spellCheck={false}
-        placeholder="RS0000000001"
-        value={trackingNumber}
-        onChange={(event) => setTrackingNumber(event.target.value)}
-        required
-      />
-      <Field
-        id="claim-phone"
-        label="Últimos 4 dígitos del teléfono"
-        inputMode="numeric"
-        autoComplete="off"
-        maxLength={4}
-        value={phoneLast4}
-        onChange={(event) => setPhoneLast4(event.target.value.replace(/\D/g, ""))}
-        required
-      />
+    <Form onSubmit={onSubmit} label="Agregar un envío">
+      <div className={styles.claimFields}>
+        <Field
+          id="claim-tracking"
+          label="Número de guía"
+          autoComplete="off"
+          autoCapitalize="characters"
+          spellCheck={false}
+          placeholder="RS0000000000"
+          value={trackingNumber}
+          onChange={(event) => setTrackingNumber(event.target.value.toUpperCase())}
+          required
+        />
+        <Field
+          id="claim-phone"
+          label="Últimos 4 dígitos del teléfono"
+          inputMode="numeric"
+          autoComplete="off"
+          maxLength={4}
+          placeholder="0000"
+          value={phoneLast4}
+          onChange={(event) => setPhoneLast4(event.target.value.replace(/\D/g, ""))}
+          required
+        />
+      </div>
       {invalid ? (
         <Alert tone="error">
-          Usa una guía RS de 10 dígitos y exactamente 4 dígitos del teléfono.
+          Escribe la guía (RS seguido de 10 dígitos) y los últimos 4 dígitos del teléfono.
         </Alert>
       ) : null}
       {claimed ? (
@@ -84,11 +89,40 @@ export function ClaimForm() {
         </Alert>
       ) : null}
       <ApiErrorAlert failure={failure} context="claim" />
-      <Actions>
-        <Button type="submit" disabled={pending || limited}>
+      <div>
+        <Button type="submit" disabled={pending || limited} loading={pending}>
           {pending ? "Vinculando…" : "Vincular guía"}
         </Button>
-      </Actions>
+      </div>
     </Form>
+  );
+}
+
+/** Panel plegable; abierto de entrada cuando la cuenta aún no tiene envíos. */
+export function ClaimPanel({ defaultOpen }: { defaultOpen: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <details
+      id="agregar"
+      className={styles.claim}
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
+      <summary className={styles.claimSummary}>
+        <span className={styles.claimIcon}>
+          <IconPlus size={20} />
+        </span>
+        <span className={styles.claimText}>
+          <span className={styles.claimTitle}>Agregar un envío</span>
+          <span className={styles.claimHint}>
+            Usa la guía y los últimos 4 dígitos del teléfono de quien recibe.
+          </span>
+        </span>
+        <IconChevronDown size={20} className={styles.claimChevron} />
+      </summary>
+      <div className={styles.claimBody}>
+        <ClaimForm />
+      </div>
+    </details>
   );
 }

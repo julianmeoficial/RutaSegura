@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ButtonLink, Card, CardTitle, EmptyState, PageIntro } from "@/components/ui";
+import { ButtonLink, EmptyState, PageIntro } from "@/components/ui";
 import { ShipmentList } from "@/features/shipments/shipment-list";
 import { requirePortalUser } from "@/server/auth/current-user";
 import { pageData } from "@/server/portal/page-data";
@@ -14,26 +14,19 @@ export default async function AgendaOverviewPage() {
   return (
     <>
       <PageIntro
-        eyebrow="RF-07 / RF-08 · A01 / A09"
+        eyebrow="Agenda"
         title="Agenda tus entregas"
-        description="Elige el envío. El selector de franjas solo aparece después de que el servidor verifica que el envío es tuyo."
+        description="Elige el envío y luego el día y la franja en que quieres recibirlo."
       />
-      <Card labelledBy="agenda-list">
-        <CardTitle id="agenda-list">Envíos</CardTitle>
-        {shipments.length > 0 ? (
-          <ShipmentList shipments={shipments} documentCounts={new Map()} mode="agenda" />
-        ) : (
-          <EmptyState
-            title="Sin envíos para agendar"
-            description="Vincula una guía en Mis envíos para poder agendar su entrega."
-            action={
-              <ButtonLink href="/portal" variant="soft">
-                Ir a Mis envíos
-              </ButtonLink>
-            }
-          />
-        )}
-      </Card>
+      {shipments.length > 0 ? (
+        <ShipmentList shipments={shipments} documentCounts={new Map()} mode="agenda" />
+      ) : (
+        <EmptyState
+          title="No hay entregas por agendar"
+          description="Agrega un envío en Mis envíos para elegir cuándo recibirlo."
+          action={<ButtonLink href="/portal">Ir a Mis envíos</ButtonLink>}
+        />
+      )}
     </>
   );
 }

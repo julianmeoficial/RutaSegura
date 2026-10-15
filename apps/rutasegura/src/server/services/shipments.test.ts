@@ -14,6 +14,7 @@ const repo = {
   insertShipmentAudit: vi.fn(),
   insertShipmentEvent: vi.fn(),
   listShipmentAudit: vi.fn(),
+  listShipmentEvents: vi.fn(),
   listShipmentsByOwner: vi.fn(),
   updateShipmentStatus: vi.fn(),
   updateShipmentWindow: vi.fn(),
@@ -26,7 +27,7 @@ vi.mock("@/server/audit/auth-events", () => ({ recordAuthEvent: vi.fn() }));
 
 const { OwnershipError } = await import("@/server/authorization/ownership");
 const { NOTIFICATION_BODY } = await import("@/server/notifications/simulate");
-const { scheduleShipment, transitionShipmentStatus, unscheduleShipment } =
+const { getShipmentForUser, scheduleShipment, transitionShipmentStatus, unscheduleShipment } =
   await import("./shipments");
 
 vi.spyOn(console, "log").mockImplementation(() => {});
@@ -51,6 +52,43 @@ function shipment(overrides: Partial<ShipmentRow> = {}): ShipmentRow {
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+describe("getShipmentForUser", () => {
+  it("devuelve el recorrido y la bitácora del dueño", async () => {
+    repo.findShipmentByPublicId.mockResolvedValue(shipment());
+    repo.listShipmentEvents.mockResolvedValue([
+      { status: "created", city: "Bogotá", occurredAt: new Date("2026-09-28T13:00:00Z") },
+      { status: "in_transit", city: "Medellín", occurredAt: new Date("2026-09-29T15:30:00Z") },
+    ]);
+    repo.listShipmentAudit.mockResolvedValue([
+      {
+        type: "claimed",
+        fromStatus: null,
+        toStatus: null,
+        createdAt: new Date("2026-09-30T12:00:00Z"),
+      },
+    ]);
+
+    const detail = await getShipmentForUser(PUBLIC_ID, ALICE);
+
+    expect(withRlsContext).toHaveBeenCalledWith({ userId: ALICE }, expect.any(Function));
+    expect(detail.events).toEqual([
+      { status: "created", city: "Bogotá", occurredAt: "2026-09-28T13:00:00.000Z" },
+      { status: "in_transit", city: "Medellín", occurredAt: "2026-09-29T15:30:00.000Z" },
+    ]);
+    expect(detail.audit).toEqual([
+      { type: "claimed", fromStatus: null, toStatus: null, createdAt: "2026-09-30T12:00:00.000Z" },
+    ]);
+  });
+
+  it("lanza OwnershipError para envíos ajenos sin leer el recorrido", async () => {
+    repo.findShipmentByPublicId.mockResolvedValue(shipment({ ownerId: BOB }));
+
+    await expect(getShipmentForUser(PUBLIC_ID, ALICE)).rejects.toBeInstanceOf(OwnershipError);
+    expect(repo.listShipmentEvents).not.toHaveBeenCalled();
+    expect(repo.listShipmentAudit).not.toHaveBeenCalled();
+  });
 });
 
 describe("transitionShipmentStatus", () => {

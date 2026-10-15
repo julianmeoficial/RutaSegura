@@ -82,7 +82,7 @@ El esquema vive en [`packages/database/src/schema.ts`](../packages/database/src/
 2. `pnpm db:generate --name descripcion` genera la migración SQL; revísala antes de versionarla.
 3. `pnpm db:migrate` la aplica.
 
-`pnpm db:seed` es idempotente: crea las guías ficticias `RS0000000001` a `RS0000000008` y sus documentos (la tabla con los dígitos de cada una está en [pentest-freeze.md](pentest-freeze.md#datos-de-prueba)) solo si no existen. Los PDF de los documentos están en `packages/database/fixtures/documents` y los sube `minio-init`.
+`pnpm db:seed` es idempotente: crea las guías ficticias `RS0000000001` a `RS0000000012`, sus documentos y las cuentas demo solo si no existen. Los dígitos de cada guía y las credenciales demo están en [datos-de-prueba.md](datos-de-prueba.md). Los PDF de los documentos están en `packages/database/fixtures/documents` y los sube `minio-init`.
 
 ## Pruebas smoke en Docker
 

@@ -275,11 +275,13 @@ describe("smoke de integración frontend-backend", () => {
       ).toBe("%PDF-");
     });
 
-    it("la bitácora del envío refleja todo el recorrido", async () => {
+    it("el detalle trae el recorrido y la bitácora refleja todo el flujo", async () => {
       const detail = await expectContract(
         await call("GET", `/api/v1/shipments/${shipmentId}`, { jar: session }),
         shipmentDetailSchema,
       );
+      expect(detail.events.length).toBeGreaterThan(0);
+      expect(detail.events.at(-1)?.status).toBe(detail.status);
       expect(detail.audit.map((event) => event.type)).toEqual([
         "claimed",
         "scheduled",

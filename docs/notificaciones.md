@@ -1,6 +1,6 @@
 # Notificaciones simuladas
 
-Los avisos que genera la agenda de entregas y los cambios de estado de un envío. La API ya está lista; la pantalla del portal se construye cuando lleguen la fase de diseño y el frontend. Esta guía explica qué existe hoy y cómo conectarlo a la UI sin romper los controles de seguridad.
+Los avisos que genera la agenda de entregas y los cambios de estado de un envío. La API y la pantalla del portal (`/portal/avisos`) ya están hechas. Esta guía explica qué existe y qué reglas debe respetar cualquier cambio en la UI para no romper los controles de seguridad.
 
 El contrato HTTP de cada endpoint está en [api.md](api.md#notificaciones).
 
@@ -21,27 +21,26 @@ No hay envío real por correo, SMS ni push: "simulada" significa que el aviso qu
 
 - **El cuerpo es fijo y no se enriquece.** Siempre es _"Hay una novedad en uno de tus envíos. Entra a RutaSegura para ver el detalle."_. La UI no debe añadir guía, ULID, nombre, teléfono, dirección, ciudad ni franja al aviso, ni en el texto ni en atributos `title` o `aria-label`. El detalle se ve entrando al envío, que sí pasa por `assertOwnership`.
 - **El texto por tipo lo pone la UI.** `kind` sirve para elegir icono y título ("Entrega agendada", "Entrega reprogramada", "Agenda cancelada", "Tu envío cambió de estado"). Esos textos viven en el frontend y tampoco llevan datos del envío.
-- **Un aviso no enlaza a un envío concreto.** A propósito no trae identificador del envío: el enlace va a la lista de envíos (`/envios` o la ruta que defina el diseño).
+- **Un aviso no enlaza a un envío concreto.** A propósito no trae identificador del envío: el enlace va a la lista de envíos (`/portal`).
 - **Nunca se pide por usuario.** La API no acepta `userId` ni `ownerId`; el usuario sale de la sesión. Un parámetro extra en la URL da `400`.
 
-## Cómo conectarlo al portal
+## Cómo está conectado en el portal
 
-La arquitectura obliga a que `app/(portal)`, `components` y `features` lean datos solo mediante `server/services` (regla `no-restricted-imports` en [`eslint.config.mjs`](../apps/rutasegura/eslint.config.mjs)) y a que el contenido útil llegue renderizado en el servidor ([arquitectura.md](arquitectura.md)). Con eso, la integración queda así:
+La arquitectura obliga a que `app/(portal)`, `components` y `features` lean datos solo mediante `server/services` (regla `no-restricted-imports` en [`eslint.config.mjs`](../apps/rutasegura/eslint.config.mjs)) y a que el contenido útil llegue renderizado en el servidor ([arquitectura.md](arquitectura.md)). La pantalla quedó así:
 
 ```mermaid
 sequenceDiagram
     participant N as Navegador
-    participant P as app/(portal)/avisos/page.tsx
-    participant U as currentUser()
+    participant P as app/(portal)/portal/avisos/page.tsx
+    participant U as requirePortalUser()
     participant S as services/notifications
     participant A as POST /api/v1/notifications/read
-    N->>P: GET /avisos con cookie de sesión
+    N->>P: GET /portal/avisos con cookie de sesión
     P->>U: cookies de la petición
     alt Sin sesión
-        U-->>P: null
-        P-->>N: redirect a /login
+        U-->>N: redirect a /ingresar?next=%2Fportal%2Favisos
     else Sesión válida
-        P->>S: listNotificationsForUser(user.id, 20)
+        P->>S: listNotificationsForUser(user.id, NOTIFICATIONS_PAGE_MAX)
         S-->>P: avisos y unreadCount
         P-->>N: HTML ya renderizado
         N->>A: Botón "Marcar como leídos" (fetch mismo origen)
@@ -50,66 +49,17 @@ sequenceDiagram
     end
 ```
 
-### 1. Obtener el usuario en un Server Component
+| Pieza                | Qué hace                                                                                                                          | ¿Dónde vive?                           |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| Página "Avisos"      | Lista semántica `aria-label="Tus avisos"`, icono y título por `kind`, marca "Nuevo" en los no leídos y estado vacío               | `app/(portal)/portal/avisos/page.tsx`  |
+| Títulos por tipo     | `NOTIFICATION_LABEL`, sin datos del envío                                                                                         | `lib/format.ts`                        |
+| Marcar como leídos   | `POST /api/v1/notifications/read` y `router.refresh()`; solo aparece si hay no leídos                                             | `features/portal/mark-read-button.tsx` |
+| Contador en cabecera | `listNotificationsForUser(user.id, 1)` en el servidor; la campana lleva `aria-label` "Avisos, N sin leer" y muestra "9+" desde 10 | `components/site-header.tsx`           |
+| Pestaña "Avisos"     | Acceso desde la navegación del portal                                                                                             | `features/portal/portal-nav.tsx`       |
 
-`authenticate()` recibe un `Request`, que los Server Components no tienen. Cuando exista el portal, añade en `server/auth/require-user.ts` un envoltorio que construya la petición con las cabeceras reales:
-
-```ts
-import { headers } from "next/headers";
-
-export async function currentUser(): Promise<AuthUser | null> {
-  const incoming = await headers();
-  const url = `${getEnv().NEXT_PUBLIC_APP_URL}/`;
-  return authenticate(new Request(url, { headers: incoming }));
-}
-```
-
-Así se reutiliza la misma verificación de JWT, sesión vigente y usuario existente que usan los Route Handlers. No leas ni decodifiques el JWT en la UI.
-
-### 2. Página o panel de avisos (Server Component)
-
-```tsx
-// app/(portal)/avisos/page.tsx
-import { redirect } from "next/navigation";
-import { currentUser } from "@/server/auth/require-user";
-import { listNotificationsForUser } from "@/server/services/notifications";
-import { NotificationList } from "@/features/notifications/notification-list";
-
-export default async function AvisosPage() {
-  const user = await currentUser();
-  if (!user) redirect("/login");
-  const { notifications, unreadCount } = await listNotificationsForUser(user.id, 20);
-  return <NotificationList notifications={notifications} unreadCount={unreadCount} />;
-}
-```
-
-- Llama al servicio directamente, no a `fetch("/api/v1/notifications")`: evita un salto HTTP interno y no hay que reenviar cookies.
-- El contador del menú (`unreadCount`) puede salir de la misma llamada en el layout del portal con `limit: 1`.
-- Los tipos (`Notification`, `NotificationListResponse`) se importan de `@rutasegura/contracts`, que sí puede usarse en Client Components.
-
-### 3. Marcar como leídos (Client Component)
-
-```tsx
-"use client";
-import { useRouter } from "next/navigation";
-
-export function MarkAllRead() {
-  const router = useRouter();
-  async function markAll() {
-    const response = await fetch("/api/v1/notifications/read", { method: "POST" });
-    if (response.ok) router.refresh();
-  }
-  return <button onClick={markAll}>Marcar como leídos</button>;
-}
-```
-
+- La página llama al servicio directamente, no a `fetch("/api/v1/notifications")`, y pasa por `pageData("portal.notifications")` para que un fallo de base de datos dé la página genérica sin filtrar detalles.
 - `fetch` a la misma URL de origen envía las cookies `HttpOnly` sin configurar nada y el navegador añade `Origin`, que `proxy.ts` exige para las mutaciones.
-- No hace falta cuerpo ni `Content-Type`. Si la respuesta es `401`, redirige a login; si es `429`, respeta `Retry-After`.
-- Alternativa equivalente: una Server Action que llame a `currentUser()` y `markNotificationsReadForUser(user.id)`.
-
-### 4. Actualización
-
-La primera versión puede refrescar al navegar o con `router.refresh()`. Si el diseño pide avisos "en vivo", usa sondeo cada 60 s o más con la pestaña visible (`document.visibilityState`); el límite es de 60 peticiones por minuto por usuario. WebSockets o SSE quedan fuera de alcance: la CSP solo permite `connect-src 'self'` y habría que revisarla.
+- Los avisos se refrescan al navegar o con `router.refresh()`. Si el diseño pide avisos "en vivo", usa sondeo cada 60 s o más con la pestaña visible (`document.visibilityState`); el límite es de 60 peticiones por minuto por usuario. WebSockets o SSE quedan fuera de alcance: la CSP solo permite `connect-src 'self'` y habría que revisarla.
 
 ## Estados que el diseño debe cubrir
 
@@ -124,11 +74,11 @@ La primera versión puede refrescar al navegar o con `router.refresh()`. Si el d
 
 Accesibilidad: el contador debe tener texto para lectores de pantalla ("3 avisos sin leer") y la lista debe ser una lista semántica. Las fechas se muestran en `America/Bogota` con `Intl.DateTimeFormat("es-CO", { timeZone: "America/Bogota" })`.
 
-## Pruebas al construir la UI
+## Pruebas
 
-- **Playwright** en Chromium, WebKit y WebKit iPhone (como exige [compatibilidad-navegadores.md](compatibilidad-navegadores.md)): con Alice agendada, la página muestra 2 avisos y el contador; tras "Marcar como leídos" el contador desaparece; el HTML no contiene la guía, el ULID ni la franja.
+- **Playwright** (`e2e-flows/portal.flow.spec.ts`, en Chromium, WebKit y WebKit iPhone como exige [compatibilidad-navegadores.md](compatibilidad-navegadores.md)): tras agendar, la página muestra "Entrega agendada" sin la guía; con "Marcar como leídos" pasa a "Estás al día.".
 - **Negativa:** con la sesión de Bob, la página de avisos sale vacía aunque Alice tenga avisos. Ya lo cubre el smoke de la API; la prueba de UI confirma que la pantalla no usa otra fuente.
-- **Sin JavaScript:** la lista debe verse igual, porque llega renderizada en el servidor; solo el botón de marcar depende de JS (o usa un `<form>` con Server Action para que funcione sin él).
+- **Sin JavaScript:** la lista se ve igual porque llega renderizada en el servidor; solo el botón de marcar depende de JS.
 
 ## Pendiente
 

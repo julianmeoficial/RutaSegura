@@ -4,34 +4,38 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import styles from "./portal.module.css";
 
-const TABS = [
+const TABS: { href: string; label: string; match: (p: string) => boolean }[] = [
   {
     href: "/portal",
     label: "Mis envíos",
-    match: (p: string) =>
-      p === "/portal" || (p.startsWith("/portal/envios/") && !p.endsWith("/agenda")),
+    match: (p) => p === "/portal" || (p.startsWith("/portal/envios/") && !p.endsWith("/agenda")),
   },
   {
     href: "/portal/agenda",
     label: "Agenda",
-    match: (p: string) => p === "/portal/agenda" || p.endsWith("/agenda"),
+    match: (p) => p === "/portal/agenda" || p.endsWith("/agenda"),
   },
   {
     href: "/portal/documentos",
     label: "Documentos",
-    match: (p: string) => p === "/portal/documentos",
+    match: (p) => p === "/portal/documentos",
+  },
+  {
+    href: "/portal/avisos",
+    label: "Avisos",
+    match: (p) => p === "/portal/avisos",
   },
   {
     href: "/portal/seguridad",
     label: "Seguridad",
-    match: (p: string) => p === "/portal/seguridad",
+    match: (p) => p === "/portal/seguridad",
   },
 ];
 
 export function PortalNav() {
   const pathname = usePathname() ?? "";
   return (
-    <nav aria-label="Mi cuenta">
+    <nav aria-label="Mi cuenta" className={styles.tabsNav}>
       <ul className={styles.tabs}>
         {TABS.map((tab) => (
           <li key={tab.href}>

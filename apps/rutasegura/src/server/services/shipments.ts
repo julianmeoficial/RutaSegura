@@ -23,6 +23,7 @@ import {
   insertShipmentAudit,
   insertShipmentEvent,
   listShipmentAudit,
+  listShipmentEvents,
   listShipmentsByOwner,
   updateShipmentStatus,
   updateShipmentWindow,
@@ -100,9 +101,15 @@ export async function getShipmentForUser(
   return withRlsContext({ userId }, async (tx) => {
     const shipment = await findShipmentByPublicId(tx, publicId);
     assertOwnership(shipment, userId);
+    const events = await listShipmentEvents(tx, shipment.id);
     const audit = await listShipmentAudit(tx, shipment.id);
     return {
       ...toSummary(shipment),
+      events: events.map((event) => ({
+        status: event.status,
+        city: event.city,
+        occurredAt: event.occurredAt.toISOString(),
+      })),
       audit: audit.map((event) => ({
         type: event.type,
         fromStatus: event.fromStatus,

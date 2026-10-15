@@ -1,0 +1,501 @@
+.home {
+  display: grid;
+  gap: var(--space-section);
+}
+
+.eyebrow,
+.eyebrowInk {
+  font-size: var(--text-label);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.eyebrowInk {
+  color: color-mix(in srgb, var(--paper) 62%, transparent);
+}
+
+.h2 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--text-h2);
+  line-height: 0.98;
+  letter-spacing: -0.03em;
+  max-width: 14ch;
+}
+
+/* Contenedor y banda comunes: mismos bordes que el texto de toda la página. */
+
+.container {
+  width: var(--container);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+.band {
+  width: calc(var(--container) - 2 * var(--gutter));
+  margin: 0 auto;
+  padding: var(--band-pad);
+  border-radius: var(--r-blob);
+}
+
+/* Hero */
+
+.hero {
+  padding-top: var(--page-top);
+}
+
+.heroInner {
+  display: grid;
+  gap: 24px;
+}
+
+/* Dos líneas fijas: "¿Dónde va" / "tu paquete?". El tamaño garantiza que la segunda quepa a 320 px. */
+.title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(2.75rem, 11.5vw, 9rem);
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+
+/* El inline-block del resaltado mete un espacio en el nombre accesible; el h1 se lee del texto oculto. */
+.titleLines {
+  display: grid;
+  gap: 0.08em;
+}
+
+.titleLine {
+  display: block;
+  white-space: nowrap;
+}
+
+/* Naranja con texto tinta: el naranja sobre papel no alcanza contraste AA como texto. */
+.highlight {
+  display: inline-block;
+  padding: 0.02em 0.16em 0.08em;
+  border-radius: var(--r-pill);
+  background: var(--route);
+  color: var(--route-ink);
+}
+
+.lead {
+  max-width: 46ch;
+  font-size: clamp(1.0625rem, 1.6vw, 1.25rem);
+  color: var(--ink-soft);
+}
+
+.tracker {
+  padding-top: clamp(8px, 2vw, 24px);
+}
+
+/* La ruta tiene su propia franja: nunca pasa por detrás de un texto. */
+.heroRoute {
+  position: relative;
+  height: clamp(88px, 12vw, 160px);
+  margin-top: clamp(16px, 3vw, 40px);
+}
+
+/* Banda arena: 7/5 con la maqueta completa dentro de la banda */
+
+.sandBand {
+  display: grid;
+  gap: clamp(32px, 5vw, 56px);
+  background: var(--sand);
+}
+
+@media (min-width: 64rem) {
+  .sandBand {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    align-items: center;
+  }
+}
+
+.sandText {
+  display: grid;
+  justify-items: start;
+  gap: 20px;
+}
+
+.bandLead {
+  max-width: 40ch;
+  font-size: 1.0625rem;
+  color: var(--ink-soft);
+}
+
+.mockup {
+  display: grid;
+  gap: 16px;
+  padding: clamp(20px, 4vw, 40px);
+  border-radius: var(--r-blob);
+  background: var(--paper);
+}
+
+.mockTitle {
+  font-size: var(--text-label);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.mockCount {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(4rem, 9vw, 7rem);
+  line-height: 0.85;
+  letter-spacing: -0.04em;
+}
+
+.mockRows {
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+/* Las filas se adaptan al ancho de la maqueta, no al de la pantalla. */
+.mockRows {
+  container-type: inline-size;
+}
+
+.mockRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 16px;
+  border-radius: var(--r-pill);
+  background: var(--sand);
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.mockGuide {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+.mockCity {
+  display: none;
+  color: var(--ink-soft);
+}
+
+@container (min-width: 300px) {
+  .mockRow {
+    gap: 14px;
+    min-height: 56px;
+    padding: 0 20px;
+    font-size: 1rem;
+  }
+
+  .mockGuide {
+    font-size: 0.9375rem;
+  }
+}
+
+@container (min-width: 420px) {
+  .mockRow {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 16px;
+    padding: 0 24px;
+  }
+
+  .mockCity {
+    display: block;
+  }
+}
+
+.mockState {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.mockState::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: var(--r-pill);
+  background: var(--ink-soft);
+}
+
+.mockState[data-tone="route"]::before {
+  background: var(--route);
+}
+
+.mockState[data-tone="ok"]::before {
+  background: var(--ok);
+}
+
+/* Cómo funciona: tres pasos completos, iguales en ancho y alto */
+
+.how {
+  display: grid;
+  gap: clamp(32px, 5vw, 56px);
+}
+
+.howBody {
+  display: grid;
+}
+
+.howHead {
+  display: grid;
+  gap: 16px;
+}
+
+/*
+ * El riel comparte la rejilla de los pasos: cada parada cae justo sobre el
+ * borde izquierdo de su número, y el trazo va de la primera a la última.
+ */
+.how {
+  --how-gap: clamp(16px, 2vw, 24px);
+  --how-col: calc((100% - 2 * var(--how-gap)) / 3);
+}
+
+.howRail {
+  position: relative;
+  display: none;
+  height: 18px;
+  margin-bottom: var(--how-gap);
+}
+
+.howRail::before {
+  content: "";
+  position: absolute;
+  left: var(--band-pad);
+  right: calc(var(--how-col) - var(--band-pad));
+  top: 50%;
+  height: 3px;
+  margin-top: -1.5px;
+  background: repeating-linear-gradient(to right, var(--route) 0 3px, transparent 3px 14px);
+}
+
+.howStop {
+  position: absolute;
+  top: 3px;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  border-radius: var(--r-pill);
+  background: var(--ink);
+}
+
+.howStop:nth-child(1) {
+  left: var(--band-pad);
+}
+
+.howStop:nth-child(2) {
+  left: calc(var(--how-col) + var(--how-gap) + var(--band-pad));
+}
+
+.howStop:nth-child(3) {
+  left: calc(2 * (var(--how-col) + var(--how-gap)) + var(--band-pad));
+}
+
+.howDot {
+  position: absolute;
+  top: 0;
+  left: var(--band-pad);
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  border-radius: var(--r-pill);
+  background: var(--route);
+}
+
+@media (min-width: 64rem) {
+  .howRail {
+    display: block;
+  }
+}
+
+.howTrack {
+  list-style: none;
+  display: grid;
+  gap: var(--how-gap);
+}
+
+@media (min-width: 64rem) {
+  .howTrack {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-rows: 1fr;
+  }
+}
+
+.howStep {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  align-content: start;
+  gap: 16px;
+  padding: var(--band-pad);
+  border-radius: var(--r-blob);
+  background: var(--sand);
+}
+
+.howStep:nth-child(2) {
+  background: var(--sand-deep);
+}
+
+.howStep:nth-child(3) {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.howNumber {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(4.5rem, 8vw, 7rem);
+  line-height: 0.85;
+  letter-spacing: -0.04em;
+}
+
+.howTitle {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-h3);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.howText {
+  max-width: 34ch;
+  color: var(--ink-soft);
+}
+
+.howStep:nth-child(3) .howText {
+  color: color-mix(in srgb, var(--paper) 72%, transparent);
+}
+
+/* Banda tinta con la demo de enmascarado: mismo contenedor y relleno que la arena */
+
+.inkBand {
+  display: grid;
+  gap: clamp(32px, 5vw, 56px);
+  background: var(--ink);
+  color: var(--paper);
+}
+
+@media (min-width: 64rem) {
+  .inkBand {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+  }
+}
+
+.inkText {
+  display: grid;
+  gap: 20px;
+}
+
+.inkLead {
+  max-width: 44ch;
+  font-size: 1.0625rem;
+  color: color-mix(in srgb, var(--paper) 72%, transparent);
+}
+
+.maskDemo {
+  display: grid;
+  gap: 8px;
+}
+
+.maskRow {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 0 24px;
+  border-radius: var(--r-pill);
+  background: rgb(245 241 234 / 8%);
+}
+
+@media (min-width: 30rem) {
+  .maskRow {
+    grid-template-columns: 7rem minmax(0, 1fr);
+    gap: 16px;
+    padding: 0 28px;
+  }
+}
+
+.maskRow dt {
+  font-size: 0.875rem;
+  color: color-mix(in srgb, var(--paper) 62%, transparent);
+}
+
+.maskRow dd {
+  display: grid;
+  font-family: var(--font-mono);
+  font-size: clamp(0.9375rem, 2vw, 1.25rem);
+  white-space: nowrap;
+}
+
+.maskFull,
+.maskHidden {
+  grid-area: 1 / 1;
+}
+
+.maskFull {
+  opacity: 0;
+  animation: reveal 7s var(--ease) infinite;
+}
+
+.maskHidden {
+  animation: cover 7s var(--ease) infinite;
+}
+
+.maskRow:nth-child(2) span {
+  animation-delay: 0.25s;
+}
+
+.maskRow:nth-child(3) span {
+  animation-delay: 0.5s;
+}
+
+@keyframes reveal {
+  0%,
+  8% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  14%,
+  36% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  44%,
+  100% {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes cover {
+  0%,
+  8% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  14%,
+  36% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  44%,
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .maskFull {
+    display: none;
+  }
+
+  .maskHidden {
+    animation: none;
+  }
+}

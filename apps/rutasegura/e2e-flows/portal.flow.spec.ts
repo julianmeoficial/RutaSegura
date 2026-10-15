@@ -14,7 +14,10 @@ test("rastreo público con guía y segundo dato", async ({ page, shipment }) => 
   await page.getByLabel(/Últimos 4 dígitos/).fill(shipment.phoneLast4);
   await page.getByRole("button", { name: "Consultar estado" }).click();
   await expect(page.getByRole("list", { name: "Recorrido del envío" })).toBeVisible();
-  await expect(page.getByText(shipment.trackingNumber).first()).toBeVisible();
+  // La vista pública enmascara la guía: solo quedan el prefijo y los últimos 4 dígitos.
+  const masked = `RS-****-${shipment.trackingNumber.slice(-4)}`;
+  await expect(page.getByText(masked)).toBeVisible();
+  await expect(page.getByRole("main")).not.toContainText(shipment.trackingNumber);
 });
 
 test("flujo completo: registro, login, reclamo, agenda y descarga firmada", async ({
@@ -37,7 +40,7 @@ test("flujo completo: registro, login, reclamo, agenda y descarga firmada", asyn
   expect(await page.evaluate(() => "__xss" in window)).toBe(false);
 
   // Mis envíos: vincular la guía con el doble dato.
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Tus envíos, y solo los tuyos");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Mis envíos");
   await page.getByLabel("Número de guía").fill(shipment.trackingNumber);
   await page.getByLabel("Últimos 4 dígitos del teléfono").fill(shipment.phoneLast4);
   await page.getByRole("button", { name: "Vincular guía" }).click();
@@ -45,10 +48,10 @@ test("flujo completo: registro, login, reclamo, agenda y descarga firmada", asyn
   const row = page.getByRole("listitem").filter({ hasText: shipment.trackingNumber });
   await expect(row.getByText("Por agendar")).toBeVisible();
 
-  // Agenda: el selector aparece tras verificar la propiedad.
+  // Agenda: el selector solo se pinta para un envío propio.
   await row.getByRole("link", { name: "Agendar" }).click();
   await expect(page).toHaveURL(/\/portal\/envios\/[0-9A-Z]{26}\/agenda$/);
-  await expect(page.getByText("Propiedad verificada")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("¿Cuándo quieres recibirlo?");
   await page
     .getByRole("group", { name: /Día de entrega/ })
     .getByRole("radio")
@@ -87,6 +90,20 @@ test("flujo completo: registro, login, reclamo, agenda y descarga firmada", asyn
   await expect(page.getByRole("list", { name: "Actividad reciente" })).toContainText(
     "Enlace de descarga generado",
   );
+  await expect(page.getByRole("list", { name: "Recorrido del envío" })).toBeVisible();
+
+  // Avisos: el de la agenda llega sin datos del envío y se puede marcar como leído.
+  await page
+    .getByRole("navigation", { name: "Mi cuenta" })
+    .getByRole("link", { name: "Avisos" })
+    .click();
+  await expect(page).toHaveURL(/\/portal\/avisos$/);
+  const notices = page.getByRole("list", { name: "Tus avisos" });
+  await expect(notices).toContainText("Entrega agendada");
+  await expect(notices).not.toContainText(shipment.trackingNumber);
+  await page.getByRole("button", { name: "Marcar como leídos" }).click();
+  await expect(page.getByText("Estás al día.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Marcar como leídos" })).toHaveCount(0);
 
   // Sin errores de consola, CSP ni hidratación en el recorrido. Lo que sigue
   // provoca un 404 a propósito.

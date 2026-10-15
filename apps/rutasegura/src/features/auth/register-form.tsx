@@ -1,15 +1,17 @@
 "use client";
 
-import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { PASSWORD_MIN_LENGTH, registerRequestSchema } from "@rutasegura/contracts";
-import { Actions, Alert, Button, ButtonLink, Field, Form, Muted } from "@/components/ui";
+import { IconCheck } from "@/components/icons";
+import { Button, ButtonLink, Field, Form, Muted } from "@/components/ui";
 import { apiRequest } from "@/lib/api-client";
 import {
   ApiErrorAlert,
   useRateLimitActive,
   type ApiFailure,
 } from "@/features/shared/api-error-alert";
+import { PasswordField } from "./password-field";
+import styles from "./auth.module.css";
 
 type Errors = Partial<Record<"fullName" | "email" | "password", string>>;
 
@@ -32,7 +34,7 @@ export function RegisterForm() {
         fullName: fields.has("fullName") ? "Escribe tu nombre (2 a 120 caracteres)." : undefined,
         email: fields.has("email") ? "Escribe un correo válido." : undefined,
         password: fields.has("password")
-          ? `Usa de ${PASSWORD_MIN_LENGTH} a 128 caracteres, sin contraseñas comunes ni tu correo.`
+          ? `Usa de ${PASSWORD_MIN_LENGTH} a 128 caracteres. Evita contraseñas comunes o tu correo.`
           : undefined,
       });
       return;
@@ -55,16 +57,17 @@ export function RegisterForm() {
 
   if (done) {
     return (
-      <>
-        <Alert tone="success" live>
-          Recibimos tu registro. Si el correo es válido, ya puedes iniciar sesión.
-        </Alert>
-        <Actions>
-          <ButtonLink href="/ingresar" variant="primary">
-            Iniciar sesión
-          </ButtonLink>
-        </Actions>
-      </>
+      <div className={styles.success} role="status">
+        <span className={styles.successIcon}>
+          <IconCheck size={28} />
+        </span>
+        <p>
+          <strong>Recibimos tu registro.</strong> Si el correo es válido, ya puedes iniciar sesión.
+        </p>
+        <ButtonLink href="/ingresar" variant="primary" block>
+          Iniciar sesión
+        </ButtonLink>
+      </div>
     );
   }
 
@@ -86,32 +89,28 @@ export function RegisterForm() {
         type="email"
         name="email"
         autoComplete="email"
+        placeholder="tu@correo.com"
         value={email}
         onChange={(event) => setEmail(event.target.value)}
         error={errors.email}
         required
       />
-      <Field
+      <PasswordField
         id="password"
         label="Contraseña"
-        type="password"
         name="password"
         autoComplete="new-password"
-        hint={`De ${PASSWORD_MIN_LENGTH} a 128 caracteres. Una frase larga es más segura que símbolos.`}
+        hint={`Mínimo ${PASSWORD_MIN_LENGTH} caracteres. Una frase larga es fácil de recordar y difícil de adivinar.`}
         value={password}
         onChange={(event) => setPassword(event.target.value)}
         error={errors.password}
         required
       />
       <ApiErrorAlert failure={failure} context="register" />
-      <Actions>
-        <Button type="submit" disabled={pending || limited}>
-          {pending ? "Creando…" : "Crear cuenta"}
-        </Button>
-      </Actions>
-      <Muted>
-        ¿Ya tienes cuenta? <Link href="/ingresar">Inicia sesión</Link>
-      </Muted>
+      <Button type="submit" block disabled={pending || limited} loading={pending}>
+        {pending ? "Creando…" : "Crear cuenta"}
+      </Button>
+      <Muted small>Es gratis. Solo usamos tu correo para que entres a tu cuenta.</Muted>
     </Form>
   );
 }

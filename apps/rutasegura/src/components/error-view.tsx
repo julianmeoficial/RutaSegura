@@ -1,7 +1,8 @@
 "use client";
 
-import { Actions, Button, ButtonLink, Card, Mono, Muted, Page, PageIntro } from "@/components/ui";
+import { Button, ButtonLink, Mono } from "@/components/ui";
 import { PAGE_ERROR } from "@/lib/error-messages";
+import { StatusScreen } from "./status-screen";
 
 /**
  * Vista de las fronteras de error. Nunca muestra `error.message` ni la traza:
@@ -12,29 +13,36 @@ export function ErrorView({
   onRetry,
   homeHref = "/",
   homeLabel = "Ir al inicio",
+  embedded = false,
 }: {
   digest?: string;
   onRetry: () => void;
   homeHref?: string;
   homeLabel?: string;
+  embedded?: boolean;
 }) {
   return (
-    <Page>
-      <PageIntro title={PAGE_ERROR.title} />
-      <Card>
-        <div role="alert">
-          <Muted>{PAGE_ERROR.body}</Muted>
-        </div>
-        {digest ? (
-          <Muted>
-            {PAGE_ERROR.reference}: <Mono>{digest}</Mono>
-          </Muted>
-        ) : null}
-        <Actions>
+    <StatusScreen
+      kind="error"
+      embedded={embedded}
+      title={PAGE_ERROR.title}
+      actions={
+        <>
           <Button onClick={onRetry}>Reintentar</Button>
-          <ButtonLink href={homeHref}>{homeLabel}</ButtonLink>
-        </Actions>
-      </Card>
-    </Page>
+          <ButtonLink href={homeHref} variant="ghost">
+            {homeLabel}
+          </ButtonLink>
+        </>
+      }
+    >
+      <p role="alert">{PAGE_ERROR.body}</p>
+      {digest ? (
+        <p>
+          <small>
+            {PAGE_ERROR.reference}: <Mono>{digest}</Mono>
+          </small>
+        </p>
+      ) : null}
+    </StatusScreen>
   );
 }

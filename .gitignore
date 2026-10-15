@@ -22,6 +22,11 @@ playwright/.cache/
 .env
 .env.*
 !.env.example
+DESIGN.md 
+.cursorrules
+
+# Snapshots del entorno de pentest (scripts/pentest-env.sh)
+.pentest-snapshots/
 
 # Vercel
 .vercel/

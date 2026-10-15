@@ -1,0 +1,185 @@
+.panel {
+  display: grid;
+  gap: 56px;
+  min-width: 0;
+}
+
+.form {
+  gap: 16px;
+}
+
+.fields {
+  display: grid;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (min-width: 48rem) {
+  .fields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .submit {
+    grid-column: 1 / -1;
+  }
+
+  .panel:not(.hero) .submit button {
+    width: auto;
+  }
+}
+
+@media (min-width: 64rem) {
+  .hero .fields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  }
+
+  /* La fila del botón queda alineada con los campos, no con sus ayudas. */
+  .hero .submit {
+    grid-column: auto;
+    padding-top: 30px;
+  }
+
+  .hero .submit button {
+    min-height: 56px;
+  }
+}
+
+.guideInput {
+  font-family: var(--font-mono);
+  font-size: 1.125rem;
+  letter-spacing: 0.04em;
+}
+
+.digitsInput {
+  font-family: var(--font-mono);
+  font-size: 1.125rem;
+  letter-spacing: 0.3em;
+}
+
+.formFoot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 24px;
+}
+
+.note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+}
+
+.note svg {
+  flex: none;
+}
+
+/* Resultado: tipografía y aire, sin caja */
+
+.result {
+  display: grid;
+  gap: 20px;
+  scroll-margin-top: var(--header-offset);
+}
+
+.resultTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+}
+
+.resultTitle {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--text-h2);
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+}
+
+.resultText {
+  max-width: 56ch;
+  font-size: 1.0625rem;
+  color: var(--ink-soft);
+}
+
+.lastUpdate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.whereText {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0.5em;
+}
+
+.whereText > * {
+  white-space: nowrap;
+}
+
+@media (max-width: 29.99rem) {
+  .whereText {
+    flex-direction: column;
+  }
+
+  .whereSep {
+    display: none;
+  }
+}
+
+.split {
+  display: grid;
+  gap: 48px;
+  padding-top: 24px;
+}
+
+@media (min-width: 64rem) {
+  .split {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    align-items: start;
+  }
+}
+
+.history {
+  display: grid;
+  gap: 20px;
+}
+
+.historyTitle {
+  font-size: var(--text-label);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.claim {
+  display: grid;
+  justify-items: start;
+  gap: 14px;
+  padding: var(--band-pad);
+  border-radius: var(--r-blob);
+  background: var(--sand);
+}
+
+.claimTitle {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-h3);
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+.claimText {
+  color: var(--ink-soft);
+}
+
+.claim a {
+  background: var(--paper);
+}

@@ -1,0 +1,202 @@
+/* Ruta del envío: riel de 3 px, paradas y un punto que avanza (solo transform). */
+
+.progress {
+  --at: 0;
+  --marker: var(--route);
+  display: grid;
+  gap: 16px;
+  padding: 12px 0 0;
+}
+
+.progress[data-step="1"] {
+  --at: 0.3333;
+}
+
+.progress[data-step="2"] {
+  --at: 0.6667;
+}
+
+.progress[data-step="3"] {
+  --at: 1;
+}
+
+.progress[data-tone="done"] {
+  --marker: var(--ok);
+}
+
+.progress[data-tone="danger"] {
+  --marker: var(--warn);
+}
+
+.rail {
+  position: relative;
+  container-type: inline-size;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 22px;
+  margin: 0 11px;
+}
+
+.rail::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 3px;
+  margin-top: -1.5px;
+  border-radius: var(--r-pill);
+  background: var(--sand-deep);
+}
+
+.fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 3px;
+  margin-top: -1.5px;
+  border-radius: var(--r-pill);
+  background: var(--ink);
+  transform: scaleX(var(--at));
+  transform-origin: left center;
+  animation: fill 900ms var(--ease) 150ms both;
+}
+
+.stop {
+  position: relative;
+  width: 10px;
+  height: 10px;
+  margin: 0 -5px;
+  border-radius: var(--r-pill);
+  background: var(--sand-deep);
+}
+
+.stop[data-reached] {
+  background: var(--ink);
+}
+
+/* El riel es un contenedor: 100cqw es su ancho, así el punto avanza solo con transform
+   y sin una caja que desborde la página. */
+.marker {
+  position: absolute;
+  top: 50%;
+  left: -11px;
+  width: 22px;
+  height: 22px;
+  margin-top: -11px;
+  border-radius: var(--r-pill);
+  background: var(--marker);
+  transform: translateX(calc(var(--at) * 100cqw));
+  animation: run 900ms var(--ease) 150ms both;
+}
+
+.progress[data-tone="active"] .marker::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--marker);
+  animation: ping 1.8s var(--ease) 1.1s infinite;
+}
+
+@keyframes fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes run {
+  from {
+    transform: translateX(0);
+  }
+}
+
+@keyframes ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+/*
+ * Seis columnas con el mismo margen que el riel: las paradas caen en 0, 2/6,
+ * 4/6 y 6/6, así que cada etiqueta central abarca dos columnas centradas en su
+ * parada y las de los extremos se alinean con el borde del contenido.
+ */
+.steps {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin: 0 11px;
+}
+
+.step {
+  grid-row: 1;
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.step:nth-child(1) {
+  grid-column: 1 / 3;
+  margin-left: -11px;
+  text-align: left;
+}
+
+.step:nth-child(2) {
+  grid-column: 2 / 4;
+}
+
+.step:nth-child(3) {
+  grid-column: 4 / 6;
+}
+
+.step:nth-child(4) {
+  grid-column: 5 / 7;
+  margin-right: -11px;
+  text-align: right;
+}
+
+.step[data-state="done"] {
+  color: var(--ink);
+}
+
+.step[data-state="current"] {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+@media (min-width: 48rem) {
+  .step {
+    font-size: 0.875rem;
+  }
+}
+
+.progressCompact {
+  padding: 0;
+}
+
+.progressCompact .rail {
+  height: 14px;
+  margin: 0 7px;
+}
+
+.progressCompact .stop {
+  width: 6px;
+  height: 6px;
+  margin: 0 -3px;
+}
+
+.progressCompact .marker {
+  left: -7px;
+  width: 14px;
+  height: 14px;
+  margin-top: -7px;
+}

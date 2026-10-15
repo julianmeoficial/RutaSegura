@@ -1,12 +1,25 @@
 import type { Metadata } from "next";
-import { Alert, Card, CardTitle, Muted, PageIntro } from "@/components/ui";
+import { PageIntro, Section } from "@/components/ui";
 import { LogoutButton } from "@/features/portal/logout-button";
 import styles from "@/features/portal/portal.module.css";
 import { requirePortalUser } from "@/server/auth/current-user";
 
 export const metadata: Metadata = { title: "Seguridad" };
 
-const ROLE_LABEL = { customer: "Cliente", operator: "Operador", admin: "Administrador" } as const;
+const TIPS = [
+  {
+    title: "Tu sesión se cierra sola",
+    text: "Si dejas de usar RutaSegura por un rato, te pediremos entrar de nuevo. Como máximo, una sesión dura 8 horas.",
+  },
+  {
+    title: "Bloqueo ante intentos fallidos",
+    text: "Si alguien escribe mal tu contraseña 5 veces seguidas, pausamos el acceso unos minutos.",
+  },
+  {
+    title: "Solo tú ves tus envíos",
+    text: "Nadie más puede ver tus envíos ni tus documentos, aunque conozca la dirección de la página.",
+  },
+];
 
 export default async function SecurityPage() {
   const user = await requirePortalUser("/portal/seguridad");
@@ -14,32 +27,36 @@ export default async function SecurityPage() {
   return (
     <>
       <PageIntro
-        eyebrow="RF-14 · A07"
-        title="Seguridad de tu cuenta"
-        description="Cómo protegemos tu sesión y qué puedes hacer desde aquí."
+        eyebrow="Seguridad"
+        title="Tu cuenta, protegida"
+        description="Tu sesión y cómo cuidamos tu cuenta."
       />
-      <Card labelledBy="session-title">
-        <CardTitle id="session-title">Sesión actual</CardTitle>
+      <Section
+        id="session-title"
+        title="Sesión actual"
+        description="Si usas un equipo compartido, cierra la sesión al terminar."
+        className={styles.session}
+      >
         <dl className={styles.dl}>
-          <dt>Nombre</dt>
-          <dd>{user.fullName}</dd>
           <dt>Correo</dt>
           <dd>{user.email}</dd>
-          <dt>Rol</dt>
-          <dd>{ROLE_LABEL[user.role]}</dd>
         </dl>
-        <Muted>
-          El acceso dura 15 minutos y se renueva solo mientras uses el portal, hasta 8 horas. Las
-          cookies son HttpOnly: ni esta página ni un script inyectado pueden leerlas.
-        </Muted>
-        <Alert>
-          Cerrar sesión revoca la sesión en el servidor: el token deja de servir de inmediato,
-          aunque no haya vencido.
-        </Alert>
         <div>
           <LogoutButton variant="danger" />
         </div>
-      </Card>
+      </Section>
+
+      <ol className={styles.tips} aria-label="Cómo protegemos tu cuenta">
+        {TIPS.map((tip, index) => (
+          <li key={tip.title} className={styles.tip}>
+            <span className={styles.tipNumber} aria-hidden="true">
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            <p className={styles.tipTitle}>{tip.title}</p>
+            <p className={styles.tipText}>{tip.text}</p>
+          </li>
+        ))}
+      </ol>
     </>
   );
 }

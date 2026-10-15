@@ -8,7 +8,7 @@ export type ErrorContext =
   "generic" | "login" | "register" | "tracking" | "claim" | "schedule" | "documents";
 
 export const NETWORK_ERROR_MESSAGE =
-  "No pudimos conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.";
+  "No pudimos conectarnos. Revisa tu conexión a internet e inténtalo de nuevo.";
 
 /**
  * Mensajes base: los de `API_ERRORS`, la misma fuente que usa el servidor, más
@@ -28,7 +28,10 @@ const BASE_MESSAGES: Record<UiErrorCode, string> = {
 const CONTEXT_MESSAGES: Record<ErrorContext, Partial<Record<UiErrorCode, string>>> = {
   generic: {},
   login: {},
-  register: { bad_request: "Revisa los datos: la contraseña no cumple la política." },
+  register: {
+    bad_request:
+      "Revisa los datos: usa una contraseña más larga que no sea común ni contenga tu correo.",
+  },
   tracking: {
     tracking_not_found:
       "No pudimos verificar la información. Revisa los datos o intenta más tarde.",
@@ -44,7 +47,7 @@ const CONTEXT_MESSAGES: Record<ErrorContext, Partial<Record<UiErrorCode, string>
   },
   documents: {
     not_found: "Este documento no está disponible.",
-    service_unavailable: "El almacenamiento de documentos no está disponible. Intenta más tarde.",
+    service_unavailable: "Los documentos no están disponibles en este momento. Intenta más tarde.",
   },
 };
 

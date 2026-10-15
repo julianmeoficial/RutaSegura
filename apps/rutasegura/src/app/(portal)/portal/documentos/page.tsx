@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
-import { Alert, ButtonLink, Card, CardTitle, EmptyState, PageIntro } from "@/components/ui";
+import { IconLock } from "@/components/icons";
+import { ButtonLink, EmptyState, PageIntro } from "@/components/ui";
 import { DocumentList } from "@/features/documents/document-list";
+import styles from "@/features/portal/portal.module.css";
 import { requirePortalUser } from "@/server/auth/current-user";
 import { pageData } from "@/server/portal/page-data";
 import { listDocumentsForUser } from "@/server/services/documents";
@@ -18,30 +20,23 @@ export default async function DocumentsPage() {
   return (
     <>
       <PageIntro
-        eyebrow="RF-09 · A01 / A05"
-        title="Tus documentos, sin enlaces públicos"
-        description="Los soportes viven en un bucket privado. Cada descarga crea una URL firmada al pulsar el botón, válida por 60 segundos."
+        eyebrow="Documentos"
+        title="Tus documentos"
+        description="Guías de transporte, facturas y soportes de entrega de tus envíos."
       />
-      <Card labelledBy="documents-title">
-        <CardTitle id="documents-title">Documentos de tus envíos</CardTitle>
-        {documents.length > 0 ? (
-          <DocumentList documents={documents} trackingNumbers={trackingNumbers} />
-        ) : (
-          <EmptyState
-            title="Sin documentos"
-            description="Cuando un envío tuyo tenga soportes (guía, factura o prueba de entrega), aparecerán aquí."
-            action={
-              <ButtonLink href="/portal" variant="soft">
-                Ir a Mis envíos
-              </ButtonLink>
-            }
-          />
-        )}
-        <Alert>
-          Ningún documento tiene una dirección permanente. Sin firma, o con la firma vencida, el
-          almacenamiento responde 403.
-        </Alert>
-      </Card>
+      <p className={styles.notePlain}>
+        <IconLock size={16} />
+        Cada descarga crea un enlace privado que dura un minuto.
+      </p>
+      {documents.length > 0 ? (
+        <DocumentList documents={documents} trackingNumbers={trackingNumbers} />
+      ) : (
+        <EmptyState
+          title="Aún no hay documentos"
+          description="Cuando uno de tus envíos tenga guía, factura o soporte de entrega, lo encontrarás aquí."
+          action={<ButtonLink href="/portal">Ir a Mis envíos</ButtonLink>}
+        />
+      )}
     </>
   );
 }

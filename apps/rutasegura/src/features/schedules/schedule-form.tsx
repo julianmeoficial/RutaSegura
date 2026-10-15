@@ -3,11 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 import type { DeliverySlot, DeliveryWindow, ShipmentSummary } from "@rutasegura/contracts";
-import { Actions, Alert, Button, Form } from "@/components/ui";
+import { Alert, Button, Form } from "@/components/ui";
 import { apiRequest } from "@/lib/api-client";
 import {
   DELIVERY_SLOTS,
   calendarDateLabel,
+  calendarDayParts,
   isSlotPast,
   slotLabel,
   upcomingBusinessDays,
@@ -90,28 +91,37 @@ export function ScheduleForm({
 
   return (
     <Form onSubmit={onSubmit} label="Agendar franja de entrega">
-      <fieldset className={styles.dates}>
-        <legend className={styles.legend}>Día de entrega (lunes a viernes)</legend>
-        {dateOptions.map((day) => (
-          <label key={day} className={`${styles.option} ${styles.datePill}`}>
-            <input
-              type="radio"
-              name="date"
-              value={day}
-              checked={date === day}
-              onChange={() => {
-                setDate(day);
-                if (slot && isSlotPast(day, slot, now)) setSlot(null);
-              }}
-            />
-            <span className={styles.optionBox}>
-              <span className={styles.optionTitle}>{calendarDateLabel(day)}</span>
-            </span>
-          </label>
-        ))}
+      <fieldset className={styles.fieldset}>
+        <legend className={styles.legend}>Día de entrega</legend>
+        <p className={styles.legendHint}>De lunes a viernes.</p>
+        <div className={styles.days}>
+          {dateOptions.map((day) => {
+            const parts = calendarDayParts(day);
+            return (
+              <label key={day} className={styles.dayOption}>
+                <input
+                  type="radio"
+                  name="date"
+                  value={day}
+                  checked={date === day}
+                  aria-label={calendarDateLabel(day)}
+                  onChange={() => {
+                    setDate(day);
+                    if (slot && isSlotPast(day, slot, now)) setSlot(null);
+                  }}
+                />
+                <span className={styles.dayBox} aria-hidden="true">
+                  <span className={styles.dayWeek}>{parts.weekday}</span>
+                  <span className={styles.dayNumber}>{parts.day}</span>
+                  <span className={styles.dayMonth}>{parts.month}</span>
+                </span>
+              </label>
+            );
+          })}
+        </div>
       </fieldset>
 
-      <fieldset className={styles.slotGroup}>
+      <fieldset className={styles.fieldset}>
         <legend className={styles.legend}>Franja para el {calendarDateLabel(date)}</legend>
         <ul className={styles.slots}>
           {DELIVERY_SLOTS.map((candidate) => {
@@ -149,8 +159,12 @@ export function ScheduleForm({
       ) : null}
       <ApiErrorAlert failure={failure} context="schedule" />
 
-      <Actions>
-        <Button type="submit" disabled={!slot || pending !== null || limited}>
+      <div className={styles.scheduleActions}>
+        <Button
+          type="submit"
+          disabled={!slot || pending !== null || limited}
+          loading={pending === "save"}
+        >
           {pending === "save"
             ? "Confirmando…"
             : current
@@ -159,14 +173,15 @@ export function ScheduleForm({
         </Button>
         {current ? (
           <Button
-            variant="danger"
+            variant="ghost"
             onClick={() => void submit("DELETE")}
             disabled={pending !== null || limited}
+            loading={pending === "cancel"}
           >
             {pending === "cancel" ? "Cancelando…" : "Cancelar franja"}
           </Button>
         ) : null}
-      </Actions>
+      </div>
     </Form>
   );
 }

@@ -51,7 +51,7 @@ test("sesión renovada, agenda completa y controles activos en cada página", as
 }, testInfo) => {
   const problems = watchProblems(page);
 
-  for (const path of ["/rastreo", "/ingresar", "/registro", "/estados"]) {
+  for (const path of ["/", "/rastreo", "/ingresar", "/registro", "/ayuda"]) {
     expectSecureDocument(await page.goto(path));
   }
 
@@ -65,6 +65,13 @@ test("sesión renovada, agenda completa y controles activos en cada página", as
   await expect(
     page.getByText(`La guía ${criticalShipment.trackingNumber} quedó vinculada`),
   ).toBeVisible();
+  // El refresco de la lista tiene que terminar antes de navegar: si WebKit lo aborta,
+  // Next recarga la página y esa navegación interrumpe la siguiente.
+  await expect(
+    page
+      .getByRole("list", { name: "Tus envíos" })
+      .getByRole("heading", { name: criticalShipment.trackingNumber }),
+  ).toBeVisible();
   await page.waitForLoadState("networkidle");
 
   for (const path of ["/portal", "/portal/agenda", "/portal/documentos", "/portal/seguridad"]) {
@@ -77,7 +84,7 @@ test("sesión renovada, agenda completa y controles activos en cada página", as
   await page.goto("/portal");
   const row = page.getByRole("listitem").filter({ hasText: criticalShipment.trackingNumber });
   await row.getByRole("link", { name: "Agendar" }).click();
-  await expect(page.getByText("Propiedad verificada")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("¿Cuándo quieres recibirlo?");
   const days = page.getByRole("group", { name: /Día de entrega/ }).getByRole("radio");
 
   await days.nth(1).check();
@@ -206,5 +213,5 @@ test("servicio caído: página de error genérica y recuperación", async ({
   }).toPass({ timeout: 60_000 });
 
   await page.goto("/portal");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Tus envíos, y solo los tuyos");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Mis envíos");
 });

@@ -13,11 +13,11 @@ flowchart LR
 
 ## Servicios
 
-| Pieza         | Servicio                        | Dato                                                                |
-| ------------- | ------------------------------- | ------------------------------------------------------------------- |
-| PostgreSQL    | Supabase, proyecto `rutasegura` | Ref `arhieajljrwuwfnifjbf`, región `us-east-1`, plan Free           |
-| Archivos (S3) | Supabase Storage                | Bucket privado `rutasegura-private`, solo PDF, máximo 10 MB         |
-| Redis         | Upstash, plan Free              | Región `us-east-1`, URL `rediss://`                                 |
+| Pieza         | Servicio                        | Dato                                                                                                                         |
+| ------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| PostgreSQL    | Supabase, proyecto `rutasegura` | Ref `arhieajljrwuwfnifjbf`, región `us-east-1`, plan Free                                                                    |
+| Archivos (S3) | Supabase Storage                | Bucket privado `rutasegura-private`, solo PDF, máximo 10 MB                                                                  |
+| Redis         | Upstash, plan Free              | Región `us-east-1`, URL `rediss://`                                                                                          |
 | App           | Vercel                          | [https://ruta-segura-one.vercel.app/](https://ruta-segura-one.vercel.app/) · Root Directory `apps/rutasegura`, región `iad1` |
 
 El plan Free de Supabase pausa el proyecto tras 7 días sin actividad. Reactívalo desde el panel antes de cada sesión del pentest.

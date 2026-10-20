@@ -57,28 +57,28 @@ Las pruebas crean y borran sus propias cuentas con dominios reservados: `smoke.t
 
 Para rastrear o vincular una guía hacen falta el número y los últimos 4 dígitos del teléfono del destinatario. Una guía vinculada a una cuenta ya no se puede vincular a otra.
 
-| Guía         | 4 dígitos | Estado      | Recorrido                        | Documentos                  | Uso                                    |
-| ------------ | --------- | ----------- | -------------------------------- | --------------------------- | -------------------------------------- |
-| RS0000000001 | 4321      | En tránsito | Bogotá → Medellín                | Guía de transporte, Factura | Libre; smoke de autenticación y agenda |
-| RS0000000002 | 9876      | Entregado   | Cali → Barranquilla              | Sin documentos              | Libre; smoke de autenticación          |
-| RS0000000003 | 5555      | En tránsito | Bogotá → Cartagena               | Soporte de entrega          | Smoke de documentos                    |
-| RS0000000004 | 1111      | En tránsito | Medellín → Turbaco               | Guía de transporte          | Flujos de UI en Chromium               |
-| RS0000000005 | 2222      | En tránsito | Cali → Pasto                     | Guía de transporte          | Flujos de UI en WebKit                 |
-| RS0000000006 | 3333      | En tránsito | Bogotá → Tunja                   | Guía de transporte          | Smoke de UI crítico en Chromium        |
-| RS0000000007 | 4444      | En tránsito | Medellín → Manizales             | Guía de transporte          | Smoke de UI crítico en WebKit          |
-| RS0000000008 | 6666      | En tránsito | Cali → Popayán                   | Guía de transporte          | Smoke de integración                   |
-| RS0000000009 | 7070      | En reparto  | Bogotá → La Dorada → Medellín    | Guía de transporte, Factura | Demo: Ana (`customer`)                 |
-| RS0000000010 | 8080      | Entregado   | Cali → Armenia → Pereira         | Soporte de entrega          | Demo: Ana (`customer`)                 |
-| RS0000000011 | 9090      | Novedad     | Barranquilla → Cartagena         | Guía de transporte          | Demo: Luis (`customer`)                |
-| RS0000000012 | 1212      | Creado      | Bucaramanga                      | Sin documentos              | Demo: Luis (`customer`)                |
-| RS0000000013 | 3131      | En tránsito | Bogotá → Ibagué → Neiva          | Guía de transporte          | Libre; reclamo / launch                |
-| RS0000000014 | 4141      | Creado      | Santa Marta                      | Sin documentos              | Libre; reclamo / launch                |
-| RS0000000015 | 5151      | En reparto  | Medellín → Rionegro → Envigado   | Guía de transporte, Factura | Libre; reclamo / launch                |
-| RS0000000016 | 6161      | Entregado   | Cali → Palmira → Buga            | Soporte de entrega          | Libre; reclamo / launch                |
-| RS0000000017 | 7171      | Novedad     | Pereira → Dosquebradas           | Guía de transporte          | Libre; reclamo / launch                |
-| RS0000000018 | 8181      | En reparto  | Bogotá → Zipaquirá → Sogamoso    | Guía de transporte          | Demo: María (`customer`)               |
-| RS0000000019 | 9191      | En tránsito | Cartagena → Sincelejo            | Factura                     | Demo: María (`customer`)               |
-| RS0000000020 | 2020      | Creado      | Villavicencio                    | Sin documentos              | Demo: Carlos (`customer`)              |
+| Guía         | 4 dígitos | Estado      | Recorrido                      | Documentos                  | Uso                                    |
+| ------------ | --------- | ----------- | ------------------------------ | --------------------------- | -------------------------------------- |
+| RS0000000001 | 4321      | En tránsito | Bogotá → Medellín              | Guía de transporte, Factura | Libre; smoke de autenticación y agenda |
+| RS0000000002 | 9876      | Entregado   | Cali → Barranquilla            | Sin documentos              | Libre; smoke de autenticación          |
+| RS0000000003 | 5555      | En tránsito | Bogotá → Cartagena             | Soporte de entrega          | Smoke de documentos                    |
+| RS0000000004 | 1111      | En tránsito | Medellín → Turbaco             | Guía de transporte          | Flujos de UI en Chromium               |
+| RS0000000005 | 2222      | En tránsito | Cali → Pasto                   | Guía de transporte          | Flujos de UI en WebKit                 |
+| RS0000000006 | 3333      | En tránsito | Bogotá → Tunja                 | Guía de transporte          | Smoke de UI crítico en Chromium        |
+| RS0000000007 | 4444      | En tránsito | Medellín → Manizales           | Guía de transporte          | Smoke de UI crítico en WebKit          |
+| RS0000000008 | 6666      | En tránsito | Cali → Popayán                 | Guía de transporte          | Smoke de integración                   |
+| RS0000000009 | 7070      | En reparto  | Bogotá → La Dorada → Medellín  | Guía de transporte, Factura | Demo: Ana (`customer`)                 |
+| RS0000000010 | 8080      | Entregado   | Cali → Armenia → Pereira       | Soporte de entrega          | Demo: Ana (`customer`)                 |
+| RS0000000011 | 9090      | Novedad     | Barranquilla → Cartagena       | Guía de transporte          | Demo: Luis (`customer`)                |
+| RS0000000012 | 1212      | Creado      | Bucaramanga                    | Sin documentos              | Demo: Luis (`customer`)                |
+| RS0000000013 | 3131      | En tránsito | Bogotá → Ibagué → Neiva        | Guía de transporte          | Libre; reclamo / launch                |
+| RS0000000014 | 4141      | Creado      | Santa Marta                    | Sin documentos              | Libre; reclamo / launch                |
+| RS0000000015 | 5151      | En reparto  | Medellín → Rionegro → Envigado | Guía de transporte, Factura | Libre; reclamo / launch                |
+| RS0000000016 | 6161      | Entregado   | Cali → Palmira → Buga          | Soporte de entrega          | Libre; reclamo / launch                |
+| RS0000000017 | 7171      | Novedad     | Pereira → Dosquebradas         | Guía de transporte          | Libre; reclamo / launch                |
+| RS0000000018 | 8181      | En reparto  | Bogotá → Zipaquirá → Sogamoso  | Guía de transporte          | Demo: María (`customer`)               |
+| RS0000000019 | 9191      | En tránsito | Cartagena → Sincelejo          | Factura                     | Demo: María (`customer`)               |
+| RS0000000020 | 2020      | Creado      | Villavicencio                  | Sin documentos              | Demo: Carlos (`customer`)              |
 
 - **Para rastrear sin cuenta,** sirve cualquier guía.
 - **Para vincular una guía a una cuenta nueva,** usa RS0000000001, RS0000000002 o cualquiera libre de launch (RS0000000013 a RS0000000017). Las de las pruebas automáticas (RS0000000003 a RS0000000008) también funcionan, pero las pruebas las desvinculan al correr.
@@ -100,10 +100,10 @@ El detalle está en [autenticacion.md](autenticacion.md#rate-limiting).
 
 ## Volver al estado inicial
 
-| Entorno                       | ¿Cómo?                                                                                         |
-| ----------------------------- | ---------------------------------------------------------------------------------------------- |
-| Docker de desarrollo          | `docker compose down --volumes` y `docker compose up -d --wait`                                |
-| Solo contadores de rate limit | `docker compose exec redis sh -c "redis-cli --scan --pattern 'rl:*' | xargs -r redis-cli del"` |
-| Entorno de pentest            | `pnpm pentest:restore` ([entorno-pentest.md](entorno-pentest.md#snapshot-y-restauración))      |
+| Entorno                       | ¿Cómo?                                                                                          |
+| ----------------------------- | ----------------------------------------------------------------------------------------------- |
+| Docker de desarrollo          | `docker compose down --volumes` y `docker compose up -d --wait`                                 |
+| Solo contadores de rate limit | `docker compose exec redis sh -c "redis-cli --scan --pattern 'rl:*' \| xargs -r redis-cli del"` |
+| Entorno de pentest            | `pnpm pentest:restore` ([entorno-pentest.md](entorno-pentest.md#snapshot-y-restauración))       |
 
 La semilla es idempotente: volver a ejecutarla (`docker compose run --rm migrate`) no duplica guías, documentos ni cuentas, y no reescribe los cambios hechos sobre ellas.

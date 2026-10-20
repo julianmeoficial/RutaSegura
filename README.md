@@ -4,7 +4,9 @@ Plataforma de seguimiento de envíos segura por diseño. Es una única aplicaci�
 
 RutaSegura corrige desde el diseño las debilidades encontradas en el análisis HTTP del sitio de rastreo que tomamos como referencia, y funciona igual en navegadores **WebKit y Chromium**: cada pull request se prueba en ambos motores antes de llegar a `main`.
 
-El proyecto está en el Sprint 3: la API, la interfaz pública y el portal autenticado (envíos, agenda y documentos con URL firmada) están integrados y listos para desplegar. La versión 0.4.0 es la que se congela para el pentest ([docs/pentest-freeze.md](docs/pentest-freeze.md)).
+El proyecto está en el Sprint 3: la API, la interfaz pública y el portal autenticado (envíos, agenda y documentos con URL firmada) están integrados. La versión 0.4.0 es la que se congela para el pentest ([docs/pentest-freeze.md](docs/pentest-freeze.md)).
+
+**Sitio en producción (Vercel):** [https://ruta-segura-one.vercel.app/](https://ruta-segura-one.vercel.app/) — desplegado y funcionando. Cuentas demo, guías y roles en [docs/datos-de-prueba.md](docs/datos-de-prueba.md). Cómo se montó el entorno: [docs/despliegue.md](docs/despliegue.md).
 
 ## Arranque rápido
 
@@ -51,7 +53,8 @@ Compose levanta la app, PostgreSQL 17, Redis 7 y MinIO (bucket privado de docume
 | [Documentos](docs/documentos.md)                                    | Bucket privado, URL firmada de 60 s y evidencia de que no es público          |
 | [Compatibilidad de navegadores](docs/compatibilidad-navegadores.md) | WebKit y Chromium como criterio de aceptación                                 |
 | [Desarrollo](docs/desarrollo.md)                                    | Entorno local, ramas (`feat/`, `fix/`, `hotfix/`, `chore/`, `docs/`), PR y CI |
-| [Datos de prueba](docs/datos-de-prueba.md)                          | Guías ficticias, cuentas demo para iniciar sesión y límites                   |
+| [Datos de prueba](docs/datos-de-prueba.md)                          | Guías ficticias, cuentas demo (con rol), límites y cómo probar en producción  |
+| [Despliegue](docs/despliegue.md)                                    | Vercel + Supabase + Upstash; URL en vivo: ruta-segura-one.vercel.app          |
 | [Smoke de UI](docs/smoke-ui.md)                                     | Checklist de flujos críticos y registro de defectos                           |
 | [Freeze para pentest](docs/pentest-freeze.md)                       | Tag, rama, alcance, objetivo, datos de prueba y checklist firmado por la SM   |
 | [Entorno de pentest](docs/entorno-pentest.md)                       | Stack aislado con datos ficticios, snapshot restaurable y declaración ética   |

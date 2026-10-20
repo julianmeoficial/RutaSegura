@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
 import { connection } from "next/server";
 import type { ReactNode } from "react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
@@ -53,6 +54,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           {children}
         </div>
         <SiteFooter />
+        <SpeedInsights />
       </body>
     </html>
   );

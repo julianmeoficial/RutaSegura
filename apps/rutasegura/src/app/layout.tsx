@@ -42,6 +42,7 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: ReactNode }) {
   // El nonce de la CSP es único por petición: todo documento se renderiza dinámicamente.
   await connection();
+  const shouldRenderSpeedInsights = process.env.VERCEL === "1";
 
   return (
     <html lang="es" className={`${display.variable} ${sans.variable} ${mono.variable}`}>
@@ -54,7 +55,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           {children}
         </div>
         <SiteFooter />
-        <SpeedInsights />
+        {shouldRenderSpeedInsights ? <SpeedInsights /> : null}
       </body>
     </html>
   );

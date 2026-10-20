@@ -121,6 +121,8 @@ test("flujo completo: registro, login, reclamo, agenda y descarga firmada", asyn
     .getByRole("button", { name: "Cerrar sesión" })
     .click();
   await expect(page).toHaveURL(/\/ingresar$/);
-  await page.goto("/portal");
-  await expect(page).toHaveURL(/\/ingresar\?next=/);
+  const blockedPortal = await page.request.get("/portal", { maxRedirects: 0 });
+  expect(blockedPortal.status()).toBeGreaterThanOrEqual(300);
+  expect(blockedPortal.status()).toBeLessThan(400);
+  expect(blockedPortal.headers()["location"]).toMatch(/\/ingresar\?next=/);
 });

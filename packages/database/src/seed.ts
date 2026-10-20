@@ -23,7 +23,9 @@ type SeedShipment = {
  * es de la prueba smoke de documentos; RS0000000004 y RS0000000005, de los
  * flujos E2E en Chromium y WebKit; RS0000000006 y RS0000000007, del smoke de UI
  * de flujos críticos (uno por motor), y RS0000000008, del smoke de integración.
- * RS0000000009 a RS0000000012 ya están vinculadas a las cuentas demo.
+ * RS0000000009 a RS0000000012 están vinculadas a Ana y Luis; RS0000000013 a
+ * RS0000000017 quedan libres para reclamar; RS0000000018 a RS0000000020, a
+ * María y Carlos.
  */
 const SEED_SHIPMENTS: SeedShipment[] = [
   {
@@ -157,27 +159,145 @@ const SEED_SHIPMENTS: SeedShipment[] = [
     phoneLast4: "1212",
     events: [{ status: "created", city: "Bucaramanga", at: "2026-10-13T17:00:00Z" }],
   },
+  {
+    trackingNumber: "RS0000000013",
+    recipientName: "Destinatario de prueba 13",
+    phoneLast4: "3131",
+    events: [
+      { status: "created", city: "Bogotá", at: "2026-10-14T10:00:00Z" },
+      { status: "in_transit", city: "Ibagué", at: "2026-10-15T08:30:00Z" },
+      { status: "in_transit", city: "Neiva", at: "2026-10-16T11:00:00Z" },
+    ],
+    documents: [{ key: "m1n4p7q2r5s8t0u3", fileName: "Guía de transporte.pdf" }],
+  },
+  {
+    trackingNumber: "RS0000000014",
+    recipientName: "Destinatario de prueba 14",
+    phoneLast4: "4141",
+    events: [{ status: "created", city: "Santa Marta", at: "2026-10-16T18:00:00Z" }],
+  },
+  {
+    trackingNumber: "RS0000000015",
+    recipientName: "Destinatario de prueba 15",
+    phoneLast4: "5151",
+    events: [
+      { status: "created", city: "Medellín", at: "2026-10-10T12:00:00Z" },
+      { status: "in_transit", city: "Medellín", at: "2026-10-11T07:00:00Z" },
+      { status: "in_transit", city: "Rionegro", at: "2026-10-12T09:20:00Z" },
+      { status: "out_for_delivery", city: "Envigado", at: "2026-10-16T13:40:00Z" },
+    ],
+    documents: [
+      { key: "v2x5z8a1c4e7g0i3", fileName: "Guía de transporte.pdf" },
+      { key: "j6k9m2n5p8q1r4s7", fileName: "Factura.pdf" },
+    ],
+  },
+  {
+    trackingNumber: "RS0000000016",
+    recipientName: "Destinatario de prueba 16",
+    phoneLast4: "6161",
+    events: [
+      { status: "created", city: "Cali", at: "2026-10-05T14:00:00Z" },
+      { status: "in_transit", city: "Palmira", at: "2026-10-06T10:00:00Z" },
+      { status: "out_for_delivery", city: "Buga", at: "2026-10-08T15:00:00Z" },
+      { status: "delivered", city: "Buga", at: "2026-10-08T18:25:00Z" },
+    ],
+    documents: [{ key: "y3z6b9d2f5h8j1l4", fileName: "Soporte de entrega.pdf" }],
+  },
+  {
+    trackingNumber: "RS0000000017",
+    recipientName: "Destinatario de prueba 17",
+    phoneLast4: "7171",
+    events: [
+      { status: "created", city: "Pereira", at: "2026-10-12T11:00:00Z" },
+      { status: "in_transit", city: "Dosquebradas", at: "2026-10-13T08:00:00Z" },
+      { status: "exception", city: "Dosquebradas", at: "2026-10-14T16:45:00Z" },
+    ],
+    documents: [{ key: "q8r1t4v7w0y3a6c9", fileName: "Guía de transporte.pdf" }],
+  },
+  {
+    trackingNumber: "RS0000000018",
+    recipientName: "Destinatario de prueba 18",
+    phoneLast4: "8181",
+    events: [
+      { status: "created", city: "Bogotá", at: "2026-10-11T09:00:00Z" },
+      { status: "in_transit", city: "Zipaquirá", at: "2026-10-12T07:30:00Z" },
+      { status: "in_transit", city: "Tunja", at: "2026-10-13T12:00:00Z" },
+      { status: "out_for_delivery", city: "Sogamoso", at: "2026-10-15T14:10:00Z" },
+    ],
+    documents: [{ key: "e4f7h0j3k6m9n2p5", fileName: "Guía de transporte.pdf" }],
+  },
+  {
+    trackingNumber: "RS0000000019",
+    recipientName: "Destinatario de prueba 19",
+    phoneLast4: "9191",
+    events: [
+      { status: "created", city: "Cartagena", at: "2026-10-09T13:00:00Z" },
+      { status: "in_transit", city: "Cartagena", at: "2026-10-10T08:00:00Z" },
+      { status: "in_transit", city: "Sincelejo", at: "2026-10-11T11:30:00Z" },
+    ],
+    documents: [{ key: "g5h8j1k4m7n0p3q6", fileName: "Factura.pdf" }],
+  },
+  {
+    trackingNumber: "RS0000000020",
+    recipientName: "Destinatario de prueba 20",
+    phoneLast4: "2020",
+    events: [{ status: "created", city: "Villavicencio", at: "2026-10-16T19:00:00Z" }],
+  },
 ];
 
 /**
  * Cuentas demo con contraseña pública, sembradas en todos los entornos a
  * propósito para mostrar el portal (docs/datos-de-prueba.md). El hash es
  * Argon2id con los parámetros de la app (m=19456, t=2, p=1) para
- * `RutaSegura-Demo-2026`.
+ * `RutaSegura-Demo-2026`. El rol (`customer` | `operator` | `admin`) solo lo
+ * fija la semilla: el registro público siempre crea `customer`.
  */
 const DEMO_PASSWORD_HASH =
   "$argon2id$v=19$m=19456,t=2,p=1$tGU8Em/LF3n4wgc1Vejkww$qCvom8chWsXnauQJ7+TY7zhCO6b3q0UERzTd+jBDL1E";
 
-const DEMO_USERS: { email: string; fullName: string; trackingNumbers: string[] }[] = [
+type DemoUser = {
+  email: string;
+  fullName: string;
+  role: (typeof schema.userRole.enumValues)[number];
+  trackingNumbers: string[];
+};
+
+const DEMO_USERS: DemoUser[] = [
   {
     email: "ana.demo@rutasegura.test",
     fullName: "Ana Demo",
+    role: "customer",
     trackingNumbers: ["RS0000000009", "RS0000000010"],
   },
   {
     email: "luis.demo@rutasegura.test",
     fullName: "Luis Demo",
+    role: "customer",
     trackingNumbers: ["RS0000000011", "RS0000000012"],
+  },
+  {
+    email: "maria.demo@rutasegura.test",
+    fullName: "María Demo",
+    role: "customer",
+    trackingNumbers: ["RS0000000018", "RS0000000019"],
+  },
+  {
+    email: "carlos.demo@rutasegura.test",
+    fullName: "Carlos Demo",
+    role: "customer",
+    trackingNumbers: ["RS0000000020"],
+  },
+  {
+    email: "operador.demo@rutasegura.test",
+    fullName: "Operador Demo",
+    role: "operator",
+    trackingNumbers: [],
+  },
+  {
+    email: "admin.demo@rutasegura.test",
+    fullName: "Admin Demo",
+    role: "admin",
+    trackingNumbers: [],
   },
 ];
 
@@ -215,7 +335,12 @@ async function main() {
     for (const demo of DEMO_USERS) {
       const [created] = await db
         .insert(schema.users)
-        .values({ email: demo.email, fullName: demo.fullName, passwordHash: DEMO_PASSWORD_HASH })
+        .values({
+          email: demo.email,
+          fullName: demo.fullName,
+          passwordHash: DEMO_PASSWORD_HASH,
+          role: demo.role,
+        })
         .onConflictDoNothing({ target: schema.users.email })
         .returning({ id: schema.users.id });
       const [user] = created
@@ -226,7 +351,8 @@ async function main() {
             .where(eq(schema.users.email, demo.email));
       if (!user) continue;
       for (const trackingNumber of demo.trackingNumbers) owners.set(trackingNumber, user.id);
-      if (created) {
+      // Aviso solo para clientes con envíos: operador y admin no tienen portal de guías.
+      if (created && demo.role === "customer" && demo.trackingNumbers.length > 0) {
         await db.insert(schema.notifications).values({
           userId: user.id,
           kind: "shipment_status_changed",

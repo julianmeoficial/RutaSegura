@@ -16,7 +16,7 @@ CMD ["pnpm", "--filter", "@rutasegura/app", "dev"]
 
 FROM deps AS builder
 ENV NODE_ENV=production
-RUN pnpm --filter @rutasegura/app build
+RUN pnpm --filter @rutasegura/app exec next build --webpack
 
 FROM node:22-alpine AS runner
 ENV NODE_ENV=production \

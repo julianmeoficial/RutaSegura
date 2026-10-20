@@ -22,7 +22,7 @@ Compose levanta seis servicios: `rutasegura` (la app en modo desarrollo), `postg
 
 `APP_BUILD_TARGET` elige el target del `Dockerfile` para el servicio `rutasegura`:
 
-| Valor                   | Qué levanta                                                                                                             |
+| Valor                   | ¿Qué levanta?                                                                                                           |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `development` (defecto) | `next dev` con recarga en caliente; su CSP añade `unsafe-eval` y `unsafe-inline`                                        |
 | `runner`                | La imagen de producción: build `standalone`, usuario `nextjs` y CSP estricta. Es la que usan los smoke, CI y el pentest |
@@ -82,7 +82,7 @@ El esquema vive en [`packages/database/src/schema.ts`](../packages/database/src/
 2. `pnpm db:generate --name descripcion` genera la migración SQL; revísala antes de versionarla.
 3. `pnpm db:migrate` la aplica.
 
-`pnpm db:seed` es idempotente: crea las guías ficticias `RS0000000001` a `RS0000000012`, sus documentos y las cuentas demo solo si no existen. Los dígitos de cada guía y las credenciales demo están en [datos-de-prueba.md](datos-de-prueba.md). Los PDF de los documentos están en `packages/database/fixtures/documents` y los sube `minio-init`.
+`pnpm db:seed` es idempotente: crea las guías ficticias `RS0000000001` a `RS0000000020`, sus documentos y las cuentas demo (con rol) solo si no existen. Los dígitos de cada guía y las credenciales demo están en [datos-de-prueba.md](datos-de-prueba.md). Los PDF de los documentos están en `packages/database/fixtures/documents` y los sube `minio-init`.
 
 ## Pruebas smoke en Docker
 

@@ -4,7 +4,7 @@ Todos los datos ficticios de RutaSegura en un solo lugar: guías, cuentas para i
 
 ## Empezar en un minuto
 
-1. Abre la app (`http://localhost:3000` con `docker compose up`, o `http://127.0.0.1:3100` con `pnpm pentest:dev`).
+1. Abre la app en producción ([https://ruta-segura-one.vercel.app/](https://ruta-segura-one.vercel.app/)), en local (`http://localhost:3000` con `docker compose up`) o en pentest (`http://127.0.0.1:3100` con `pnpm pentest:dev`).
 2. Rastrea sin cuenta: guía `RS0000000009`, últimos 4 dígitos `7070`. Va en reparto.
 3. Inicia sesión con `ana.demo@rutasegura.test` y la contraseña `RutaSegura-Demo-2026`. Verás dos envíos, un aviso sin leer y documentos para descargar.
 

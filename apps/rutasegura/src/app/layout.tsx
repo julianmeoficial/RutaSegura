@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
 import { connection } from "next/server";
 import type { ReactNode } from "react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
@@ -41,6 +42,7 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: ReactNode }) {
   // El nonce de la CSP es único por petición: todo documento se renderiza dinámicamente.
   await connection();
+  const shouldRenderSpeedInsights = process.env.VERCEL === "1";
 
   return (
     <html lang="es" className={`${display.variable} ${sans.variable} ${mono.variable}`}>
@@ -53,6 +55,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           {children}
         </div>
         <SiteFooter />
+        {shouldRenderSpeedInsights ? <SpeedInsights /> : null}
       </body>
     </html>
   );

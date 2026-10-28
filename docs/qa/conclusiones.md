@@ -4,6 +4,21 @@
 >
 > **Alcance de este documento.** Es una **verificación documental** hecha el 25/10/2026 contra `docs/`, el smoke de API y el smoke de UI del 13/10/2026. **No es una ejecución manual.** Las pruebas manuales de la PO se registran en las plantillas de esta carpeta, solo cuando se ejecuten. La decisión y la firma son de la PO (Alexa Ricardo) y siguen pendientes.
 
+## 0. Conclusión con la ejecución manual del 28/10/2026
+
+Karina Redondo Sáez probó a mano el despliegue (https://ruta-segura-one.vercel.app/) con las cuentas demo. Detalle y capturas en `checklist-asvs-l1.md`, `criterios-aceptacion-po.md`, `defectos.md` y `evidencias/`.
+
+| Resultado | Capítulos / criterios |
+| --- | --- |
+| OK | V4 control de acceso, V9 comunicaciones, V12 archivos; vincular y agendar, descarga con enlace temporal, notificaciones |
+| Parcial | V2, V3, V7, V8, V13, V14; registro, rastreo (429 no visto en rastreo), casos por rol (administrador sin interfaz) |
+| No ejecutado | V5 (XSS y SQLi), bloqueo de cuenta tras 5 fallos, CORS, ausencia de `X-Powered-By`, comparación con Figma |
+
+- Defectos críticos abiertos: **0**. Observación nueva: OBS-04 (baja), la lista de actividad del envío muestra el evento nuevo solo tras recargar.
+- Las secciones 2 a 5 de abajo son la verificación documental del 25/10 y **no sustituyen** esta ejecución manual: donde dicen «Cumple por evidencia» y la prueba manual quedó Parcial o No ejecutada, vale lo de esta sección.
+- La propuesta **GO con condiciones** sigue siendo solo una propuesta. Condición añadida: ejecutar a mano lo que quedó No ejecutado (o declararlo fuera de alcance).
+- Decisión Go/No-Go y firma: pendientes de la PO (Alexa Ricardo).
+
 ## 1. Datos del ensayo
 
 | Campo | Valor |
@@ -60,5 +75,6 @@ Condiciones:
 3. Se compara la pantalla de Documentos con el prototipo de Figma.
 4. Quedan declarados como pendientes: TOTP, RF-10 (cotización) y RF-13 (auditoría del administrador).
 5. La PO ejecuta a mano las plantillas de esta carpeta antes de dar la tarea por cerrada.
+6. Se ejecuta a mano lo que quedó «No ejecutado» el 28/10 (V5, bloqueo de cuenta, CORS, `X-Powered-By`, Figma) o se declara fuera de alcance.
 
 **Fecha de la decisión:** pendiente · **Firma PO (Alexa Ricardo):** pendiente

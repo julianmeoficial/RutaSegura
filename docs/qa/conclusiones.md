@@ -1,5 +1,7 @@
 # QA funcional y checklist ASVS L1: conclusiones (SCRUM-23)
 
+> **Actualización del 28/10/2026.** Después de esta verificación documental, Karina Redondo ejecutó pruebas manuales en el despliegue. Su resultado está en `datos-del-ensayo.md`, `checklist-asvs-l1.md`, `criterios-aceptacion-po.md` y `defectos.md`. Lo que no se probó a mano sigue marcado como no ejecutado.
+>
 > **Alcance de este documento.** Es una **verificación documental** hecha el 25/10/2026 contra `docs/`, el smoke de API y el smoke de UI del 13/10/2026. **No es una ejecución manual.** Las pruebas manuales de la PO se registran en las plantillas de esta carpeta, solo cuando se ejecuten. La decisión y la firma son de la PO (Alexa Ricardo) y siguen pendientes.
 
 ## 1. Datos del ensayo

@@ -4,18 +4,18 @@ Los soportes de un envío (guía de transporte, factura, prueba de entrega) vive
 
 ## Garantías
 
-| Garantía                                | ¿Cómo se cumple?                                                                                            | ¿Cómo se verifica?                                      |
-| --------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| El bucket no es público                 | Sin política anónima (`mc anonymous set none`): todo GET o listado sin firma responde 403                   | `evidence-signed-urls.sh`, `documents.smoke.test.ts`    |
-| Ninguna URL permanente                  | La API nunca devuelve la clave del objeto ni el endpoint del almacenamiento; solo URLs firmadas que vencen  | `documents.smoke.test.ts` (listado sin `objectKey`)     |
-| La URL vence a los 60 s                 | Firma SigV4 con `X-Amz-Expires=60`; vencida, MinIO responde `403 AccessDenied: Request has expired`         | Smoke y evidencia esperan el vencimiento real           |
-| No se puede alargar ni falsificar       | `X-Amz-Expires` y los parámetros `response-*` están dentro de la firma; cambiar un carácter da 403          | Smoke y evidencia                                       |
-| Solo el dueño obtiene la URL            | `assertOwnership` antes de firmar; documento ajeno, inexistente o mal formado: el mismo `404 not_found`     | `documents.test.ts`, smoke (Dave contra Carol), RLS     |
-| La app no puede escribir ni borrar      | La cuenta de la app en MinIO tiene la política `readonly`; la cuenta root solo la usan los contenedores     | Evidencia: escritura con la cuenta de la app → denegado |
-| Cada emisión queda registrada           | Evento `document_url_issued` en `shipment_audit_events`, con actor; la URL nunca va a logs ni a la bitácora | Smoke y E2E (bitácora del envío)                        |
-| La descarga no queda en cachés          | `Cache-Control: no-store` en la respuesta de la API y como `response-cache-control` firmado en el objeto    | Smoke y evidencia                                       |
-| El archivo se descarga, no se renderiza | `response-content-disposition: attachment` firmado: el PDF no se abre como página del origen del bucket     | Smoke, evidencia y E2E (evento `download`)              |
-| Abuso de emisión limitado               | 30 URLs por usuario por minuto (`DOCUMENTS_RATE_LIMIT_*`), con 429 y `Retry-After`                          | Smoke                                                   |
+| Garantía                                | ¿Cómo se cumple?                                                                                                         | ¿Cómo se verifica?                                                                      |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| El bucket no es público                 | Sin política anónima (`mc anonymous set none`): todo GET o listado sin firma responde 403                                | `evidence-signed-urls.sh`, `documents.smoke.test.ts`                                    |
+| Ninguna URL permanente                  | La API nunca devuelve la clave del objeto ni el endpoint del almacenamiento; solo URLs firmadas que vencen               | `documents.smoke.test.ts` (listado sin `objectKey`)                                     |
+| La URL vence a los 60 s                 | Firma SigV4 con `X-Amz-Expires=60`; vencida, MinIO responde `403 AccessDenied: Request has expired`                      | Smoke y evidencia esperan el vencimiento real                                           |
+| No se puede alargar ni falsificar       | `X-Amz-Expires` y los parámetros `response-*` están dentro de la firma; cambiar un carácter da 403                       | Smoke y evidencia                                                                       |
+| Solo el dueño obtiene la URL            | `assertOwnership` antes de firmar; documento ajeno, inexistente o mal formado: el mismo `404 not_found`                  | `documents.test.ts`, smoke (Dave contra Carol), RLS                                     |
+| La app no puede escribir ni borrar      | Política `rutasegura-documents`: solo `GetObject`/`ListBucket` bajo `documents/*`; la root solo la usan los contenedores | Evidencia: escritura con la cuenta de la app → denegado; `mc admin policy info` sin `*` |
+| Cada emisión queda registrada           | Evento `document_url_issued` en `shipment_audit_events`, con actor; la URL nunca va a logs ni a la bitácora              | Smoke y E2E (bitácora del envío)                                                        |
+| La descarga no queda en cachés          | `Cache-Control: no-store` en la respuesta de la API y como `response-cache-control` firmado en el objeto                 | Smoke y evidencia                                                                       |
+| El archivo se descarga, no se renderiza | `response-content-disposition: attachment` firmado: el PDF no se abre como página del origen del bucket                  | Smoke, evidencia y E2E (evento `download`)                                              |
+| Abuso de emisión limitado               | 30 URLs por usuario por minuto (`DOCUMENTS_RATE_LIMIT_*`), con 429 y `Retry-After`                                       | Smoke                                                                                   |
 
 ## Flujo
 
@@ -70,7 +70,7 @@ RLS: `documents_select` hereda la visibilidad del envío (dueño de la sesión o
 
 Con `APP_ENV=production`, la app no arranca si falta alguna variable de almacenamiento, si conserva un valor de ejemplo o si `STORAGE_PUBLIC_ENDPOINT` no es HTTPS. Fuera de producción el almacenamiento es opcional: sin él, la descarga responde `503 service_unavailable` y el resto de la app funciona.
 
-En local, `minio-init` crea el bucket, quita cualquier acceso anónimo, crea la cuenta de la app con `readonly` y sube los PDF ficticios de [`packages/database/fixtures/documents`](../packages/database/fixtures/documents). MinIO ya no publica imágenes en Docker Hub, así que Compose usa la imagen de Chainguard fijada por digest. La consola web de MinIO está apagada y el puerto 9000 se publica solo en `127.0.0.1`.
+En local, `minio-init` crea el bucket, quita cualquier acceso anónimo, crea la cuenta de la app con la política `rutasegura-documents` (solo el prefijo `documents/*`) y sube los PDF ficticios de [`packages/database/fixtures/documents`](../packages/database/fixtures/documents). MinIO ya no publica imágenes en Docker Hub, así que Compose usa la imagen de Chainguard fijada por digest. La consola web de MinIO está apagada y el puerto 9000 se publica solo en `127.0.0.1`.
 
 **En producción** (S3, R2 o equivalente): bloqueo de acceso público activo a nivel de cuenta y de bucket, sin políticas anónimas ni ACL públicas, credenciales de la app limitadas a `GetObject` sobre el bucket y endpoint HTTPS.
 

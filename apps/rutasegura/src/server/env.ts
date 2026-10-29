@@ -22,6 +22,16 @@ const envSchema = z
     NEXT_PUBLIC_APP_URL: z.url(),
     /** Orígenes extra con acceso CORS a la API, separados por comas. */
     CORS_ALLOWED_ORIGINS: z.string().optional(),
+    /**
+     * Si es true, `clientIp` confía en X-Forwarded-For / X-Real-IP (Vercel, nginx).
+     * Si se omite: true en production/preview, false en development.
+     */
+    TRUST_PROXY: z.preprocess((value) => {
+      if (value === undefined || value === "") return undefined;
+      if (value === true || value === "true" || value === "1") return true;
+      if (value === false || value === "false" || value === "0") return false;
+      return value;
+    }, z.boolean().optional()),
 
     DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
     REDIS_URL: z.url({ protocol: /^rediss?$/ }),
@@ -107,7 +117,7 @@ const envSchema = z
     }
   });
 
-export type Env = z.infer<typeof envSchema>;
+export type Env = Omit<z.infer<typeof envSchema>, "TRUST_PROXY"> & { TRUST_PROXY: boolean };
 
 /**
  * Valida las variables de entorno. El mensaje de error nombra las claves
@@ -121,7 +131,11 @@ export function parseEnv(source: Record<string, string | undefined>): Env {
       .join("; ");
     throw new Error(`Configuración de entorno inválida. ${details}`);
   }
-  return result.data;
+  const env = result.data;
+  return {
+    ...env,
+    TRUST_PROXY: env.TRUST_PROXY ?? (env.APP_ENV === "production" || env.APP_ENV === "preview"),
+  };
 }
 
 let cached: Env | undefined;

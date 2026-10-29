@@ -13,7 +13,12 @@ export function cookieNames(isHttps: boolean): CookieNames {
     : { access: "rs_at", refresh: "rs_rt" };
 }
 
+/**
+ * En `APP_ENV=production` siempre Secure/`__Host-` (aunque falle el proto).
+ * Sobre HTTP local en development/preview se omite Secure para Safari.
+ */
 export function isHttpsRequest(request: Request): boolean {
+  if (process.env.APP_ENV === "production") return true;
   const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
   return (forwardedProto ?? new URL(request.url).protocol.replace(":", "")) === "https";
 }

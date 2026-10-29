@@ -37,7 +37,7 @@ Desde el Sprint 1, RutaSegura cubre OWASP A07 y A01 con estos controles; el deta
 - Rastreo con número de guía y últimos 4 dígitos del teléfono, guardados como HMAC.
 - Bitácora `auth_events` sin datos personales en claro.
 
-**Requisito de despliegue:** la app debe ir detrás de un proxy que sobrescriba o extienda `X-Forwarded-For` (Vercel, nginx, Caddy). Sin él, el límite por IP es evadible; los límites por correo y por guía y el bloqueo por cuenta no dependen de la IP.
+**Requisito de despliegue:** en production/preview `TRUST_PROXY` es true y la app confía en el `X-Forwarded-For` del proxy (Vercel, nginx, Caddy). En development no confía en esa cabecera. Los límites por correo y por guía y el bloqueo por cuenta no dependen solo de la IP.
 
 ## Autorización por objeto
 
@@ -69,10 +69,11 @@ Cada petición abre una transacción y fija `app.user_id` y, cuando aplica, `app
 
 En `notifications`, `SELECT` y `UPDATE` (marcar como leído) exigen `user_id = app.user_id` en `USING` y en `WITH CHECK`: otro usuario no puede marcar ni reasignarse avisos ajenos. Verificado con un rol no dueño.
 
-El control que cuenta en la API es `assertOwnership`; la RLS evita que un error en una consulta futura exponga filas ajenas. Límites conocidos:
+El control que cuenta en la API es `assertOwnership`; la RLS evita que un error en una consulta futura exponga filas ajenas. Defensa en profundidad:
 
-- **PostgreSQL no aplica RLS al dueño de la tabla** (salvo `FORCE ROW LEVEL SECURITY`). En Compose el rol `rutasegura` es dueño, así que en desarrollo las políticas no se ejercitan. En producción el runtime debe conectarse con un rol **no dueño** con `SELECT`, `INSERT` y `UPDATE` sobre estas tablas, y las migraciones con otro rol dueño.
-- `app.user_id` y `app.mode` los fija la aplicación: protegen contra errores de la app, no contra quien ya tenga una conexión a la base.
+- El runtime conecta como `rutasegura_app` (sin `BYPASSRLS`, sin ser dueño). Las migraciones y la semilla usan el dueño (`rutasegura` en Compose, `DATABASE_URL_DIRECT` en Supabase). La migración `0006_runtime_role_force_rls` aplica `FORCE ROW LEVEL SECURITY` en las 8 tablas y otorga solo `SELECT`/`INSERT`/`UPDATE`/`DELETE` al rol app.
+- `users`, `sessions` y `auth_events` tienen políticas solo para `rutasegura_app`; los roles `anon`/`authenticated` de Supabase siguen sin acceso. Envíos, documentos y avisos siguen las políticas por `app.user_id` / `app.mode`.
+- `app.user_id` y `app.mode` los fija la aplicación: protegen contra errores de la app, no contra quien ya tenga una conexión a la base con privilegios de dueño o superusuario.
 
 ### Retención
 
@@ -85,7 +86,7 @@ Desde el Sprint 3 los soportes de los envíos viven en un bucket privado (OWASP 
 | Capa          | Control                                                                                                         | ¿Dónde vive?                    |
 | ------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------- |
 | Bucket        | Sin política anónima: GET y listados sin firma responden 403                                                    | `scripts/minio-init.sh`         |
-| Credenciales  | La app firma con una cuenta `readonly`; la root solo la usan los contenedores                                   | `compose.yaml`, `minio-init.sh` |
+| Credenciales  | La app firma con política `rutasegura-documents` (`documents/*`); la root solo la usan los contenedores         | `compose.yaml`, `minio-init.sh` |
 | Autorización  | `assertOwnership` antes de firmar; ajeno, inexistente o mal formado: el mismo 404                               | `services/documents.ts`         |
 | Firma         | SigV4 con TTL de 60 s (máximo 300), `attachment` y `no-store` firmados; la API nunca expone la clave del objeto | `server/storage/signer.ts`      |
 | Configuración | En producción el almacenamiento es obligatorio, sin valores de ejemplo y con endpoint HTTPS                     | `env.ts`                        |
@@ -310,12 +311,11 @@ Errores visibles al usuario:
 
 ## Controles pendientes
 
-| Control                                                                 | Riesgo OWASP | Phase      |
-| ----------------------------------------------------------------------- | ------------ | ---------- |
-| TOTP opcional como segundo factor                                       | A07          | 8          |
-| Rol de base de datos no dueño en producción, para que la RLS se aplique | A01          | Despliegue |
-| Purga de `shipment_audit_events` y `notifications` a los 365 días       | A09          | 14 a 17    |
-| Checklist ASVS L1, pentesting y re-test antes/después                   | Todas        | 14 a 17    |
+| Control                                                           | Riesgo OWASP | Phase   |
+| ----------------------------------------------------------------- | ------------ | ------- |
+| TOTP opcional como segundo factor                                 | A07          | 8       |
+| Purga de `shipment_audit_events` y `notifications` a los 365 días | A09          | 14 a 17 |
+| Checklist ASVS L1, pentesting y re-test antes/después             | Todas        | 14 a 17 |
 
 ## Cómo verificarlo
 

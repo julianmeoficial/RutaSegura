@@ -329,6 +329,14 @@ describe("smoke de autenticación en Docker", () => {
     expect((await unchanged.json()).window.slot).toBe("14-16");
   });
 
+  it("Bob recibe 404 en /portal/envios/{id}/agenda del envío de Alice", async () => {
+    const unknownId = "01J8Z3K4M5N6P7Q8R9S0T1V2W3";
+    const agenda = await request("GET", `/portal/envios/${aliceShipmentId}/agenda`, bobShipments);
+    const agendaUnknown = await request("GET", `/portal/envios/${unknownId}/agenda`, bobShipments);
+    expect(agenda.status).toBe(404);
+    expect(agendaUnknown.status).toBe(404);
+  });
+
   it("la lista de Alice solo incluye sus envíos reclamados", async () => {
     const response = await request("GET", "/api/v1/shipments", aliceShipments);
     expect(response.status).toBe(200);
@@ -508,6 +516,14 @@ describe("smoke de autenticación en Docker", () => {
   });
 
   it("el rastreo exige guía y segundo dato, con respuesta uniforme", async () => {
+    // Los reclamos previos y el login compartieron la clave IP `direct` (sin
+    // TRUST_PROXY). Vaciamos el cupo de rastreo para aislar estos casos.
+    const Redis = (await import("ioredis")).default;
+    const redis = new Redis(process.env.REDIS_URL ?? "redis://127.0.0.1:6379");
+    const keys = await redis.keys("rl:tracking:*");
+    if (keys.length > 0) await redis.del(...keys);
+    redis.disconnect();
+
     const ok = await post("/api/v1/tracking", {
       trackingNumber: "RS0000000001",
       phoneLast4: "4321",

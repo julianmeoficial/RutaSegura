@@ -6,3 +6,7 @@ packages:
 allowBuilds:
   esbuild: true
   unrs-resolver: true
+
+# GHSA-68fv-2mgg-jv7q: source-map-js <1.2.2 (vía next → postcss).
+overrides:
+  source-map-js: ">=1.2.2"

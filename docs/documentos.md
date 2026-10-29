@@ -4,18 +4,18 @@ Los soportes de un envío (guía de transporte, factura, prueba de entrega) vive
 
 ## Garantías
 
-| Garantía                                | ¿Cómo se cumple?                                                                                            | ¿Cómo se verifica?                                      |
-| --------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| El bucket no es público                 | Sin política anónima (`mc anonymous set none`): todo GET o listado sin firma responde 403                   | `evidence-signed-urls.sh`, `documents.smoke.test.ts`    |
-| Ninguna URL permanente                  | La API nunca devuelve la clave del objeto ni el endpoint del almacenamiento; solo URLs firmadas que vencen  | `documents.smoke.test.ts` (listado sin `objectKey`)     |
-| La URL vence a los 60 s                 | Firma SigV4 con `X-Amz-Expires=60`; vencida, MinIO responde `403 AccessDenied: Request has expired`         | Smoke y evidencia esperan el vencimiento real           |
-| No se puede alargar ni falsificar       | `X-Amz-Expires` y los parámetros `response-*` están dentro de la firma; cambiar un carácter da 403          | Smoke y evidencia                                       |
-| Solo el dueño obtiene la URL            | `assertOwnership` antes de firmar; documento ajeno, inexistente o mal formado: el mismo `404 not_found`     | `documents.test.ts`, smoke (Dave contra Carol), RLS     |
+| Garantía                                | ¿Cómo se cumple?                                                                                                         | ¿Cómo se verifica?                                                                      |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| El bucket no es público                 | Sin política anónima (`mc anonymous set none`): todo GET o listado sin firma responde 403                                | `evidence-signed-urls.sh`, `documents.smoke.test.ts`                                    |
+| Ninguna URL permanente                  | La API nunca devuelve la clave del objeto ni el endpoint del almacenamiento; solo URLs firmadas que vencen               | `documents.smoke.test.ts` (listado sin `objectKey`)                                     |
+| La URL vence a los 60 s                 | Firma SigV4 con `X-Amz-Expires=60`; vencida, MinIO responde `403 AccessDenied: Request has expired`                      | Smoke y evidencia esperan el vencimiento real                                           |
+| No se puede alargar ni falsificar       | `X-Amz-Expires` y los parámetros `response-*` están dentro de la firma; cambiar un carácter da 403                       | Smoke y evidencia                                                                       |
+| Solo el dueño obtiene la URL            | `assertOwnership` antes de firmar; documento ajeno, inexistente o mal formado: el mismo `404 not_found`                  | `documents.test.ts`, smoke (Dave contra Carol), RLS                                     |
 | La app no puede escribir ni borrar      | Política `rutasegura-documents`: solo `GetObject`/`ListBucket` bajo `documents/*`; la root solo la usan los contenedores | Evidencia: escritura con la cuenta de la app → denegado; `mc admin policy info` sin `*` |
-| Cada emisión queda registrada           | Evento `document_url_issued` en `shipment_audit_events`, con actor; la URL nunca va a logs ni a la bitácora | Smoke y E2E (bitácora del envío)                        |
-| La descarga no queda en cachés          | `Cache-Control: no-store` en la respuesta de la API y como `response-cache-control` firmado en el objeto    | Smoke y evidencia                                       |
-| El archivo se descarga, no se renderiza | `response-content-disposition: attachment` firmado: el PDF no se abre como página del origen del bucket     | Smoke, evidencia y E2E (evento `download`)              |
-| Abuso de emisión limitado               | 30 URLs por usuario por minuto (`DOCUMENTS_RATE_LIMIT_*`), con 429 y `Retry-After`                          | Smoke                                                   |
+| Cada emisión queda registrada           | Evento `document_url_issued` en `shipment_audit_events`, con actor; la URL nunca va a logs ni a la bitácora              | Smoke y E2E (bitácora del envío)                                                        |
+| La descarga no queda en cachés          | `Cache-Control: no-store` en la respuesta de la API y como `response-cache-control` firmado en el objeto                 | Smoke y evidencia                                                                       |
+| El archivo se descarga, no se renderiza | `response-content-disposition: attachment` firmado: el PDF no se abre como página del origen del bucket                  | Smoke, evidencia y E2E (evento `download`)                                              |
+| Abuso de emisión limitado               | 30 URLs por usuario por minuto (`DOCUMENTS_RATE_LIMIT_*`), con 429 y `Retry-After`                                       | Smoke                                                                                   |
 
 ## Flujo
 

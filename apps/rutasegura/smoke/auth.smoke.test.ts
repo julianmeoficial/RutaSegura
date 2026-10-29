@@ -331,16 +331,8 @@ describe("smoke de autenticación en Docker", () => {
 
   it("Bob recibe 404 en /portal/envios/{id}/agenda del envío de Alice", async () => {
     const unknownId = "01J8Z3K4M5N6P7Q8R9S0T1V2W3";
-    const agenda = await request(
-      "GET",
-      `/portal/envios/${aliceShipmentId}/agenda`,
-      bobShipments,
-    );
-    const agendaUnknown = await request(
-      "GET",
-      `/portal/envios/${unknownId}/agenda`,
-      bobShipments,
-    );
+    const agenda = await request("GET", `/portal/envios/${aliceShipmentId}/agenda`, bobShipments);
+    const agendaUnknown = await request("GET", `/portal/envios/${unknownId}/agenda`, bobShipments);
     expect(agenda.status).toBe(404);
     expect(agendaUnknown.status).toBe(404);
   });

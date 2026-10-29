@@ -134,8 +134,7 @@ export function parseEnv(source: Record<string, string | undefined>): Env {
   const env = result.data;
   return {
     ...env,
-    TRUST_PROXY:
-      env.TRUST_PROXY ?? (env.APP_ENV === "production" || env.APP_ENV === "preview"),
+    TRUST_PROXY: env.TRUST_PROXY ?? (env.APP_ENV === "production" || env.APP_ENV === "preview"),
   };
 }
 

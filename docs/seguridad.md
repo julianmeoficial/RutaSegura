@@ -86,7 +86,7 @@ Desde el Sprint 3 los soportes de los envíos viven en un bucket privado (OWASP 
 | Capa          | Control                                                                                                         | ¿Dónde vive?                    |
 | ------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------- |
 | Bucket        | Sin política anónima: GET y listados sin firma responden 403                                                    | `scripts/minio-init.sh`         |
-| Credenciales  | La app firma con política `rutasegura-documents` (`documents/*`); la root solo la usan los contenedores          | `compose.yaml`, `minio-init.sh` |
+| Credenciales  | La app firma con política `rutasegura-documents` (`documents/*`); la root solo la usan los contenedores         | `compose.yaml`, `minio-init.sh` |
 | Autorización  | `assertOwnership` antes de firmar; ajeno, inexistente o mal formado: el mismo 404                               | `services/documents.ts`         |
 | Firma         | SigV4 con TTL de 60 s (máximo 300), `attachment` y `no-store` firmados; la API nunca expone la clave del objeto | `server/storage/signer.ts`      |
 | Configuración | En producción el almacenamiento es obligatorio, sin valores de ejemplo y con endpoint HTTPS                     | `env.ts`                        |

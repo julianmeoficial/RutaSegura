@@ -3,7 +3,7 @@ import { parseEnv } from "./env";
 
 const validLocal = {
   NEXT_PUBLIC_APP_URL: "http://localhost:3000",
-  DATABASE_URL: "postgresql://rutasegura:local_only_change_me@localhost:5432/rutasegura",
+  DATABASE_URL: "postgresql://rutasegura_app:local_only_change_me_app@localhost:5432/rutasegura",
   REDIS_URL: "redis://localhost:6379",
   SESSION_SECRET: "replace_with_at_least_32_random_bytes",
   CSRF_SECRET: "replace_with_at_least_32_random_bytes",
@@ -31,8 +31,16 @@ describe("parseEnv", () => {
   it("acepta la configuración local de ejemplo y aplica valores por defecto", () => {
     const env = parseEnv(validLocal);
     expect(env.APP_ENV).toBe("development");
+    expect(env.TRUST_PROXY).toBe(false);
     expect(env.SIGNED_URL_TTL_SECONDS).toBe(60);
     expect(env.TRACKING_RATE_LIMIT_MAX).toBe(5);
+  });
+
+  it("TRUST_PROXY por defecto es true en production y preview", () => {
+    expect(parseEnv(validProduction).TRUST_PROXY).toBe(true);
+    expect(parseEnv({ ...validLocal, APP_ENV: "preview" }).TRUST_PROXY).toBe(true);
+    expect(parseEnv({ ...validLocal, TRUST_PROXY: "true" }).TRUST_PROXY).toBe(true);
+    expect(parseEnv({ ...validProduction, TRUST_PROXY: "false" }).TRUST_PROXY).toBe(false);
   });
 
   it("rechaza secretos cortos sin revelar su valor", () => {

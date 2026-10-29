@@ -1,19 +1,33 @@
 import "server-only";
+import { getEnv } from "@/server/env";
 
 const USER_AGENT_MAX_LENGTH = 200;
 
+/** Clave de rate limit cuando no hay proxy de confianza (IP de socket no disponible en Request). */
+export const DIRECT_CLIENT_IP = "direct";
+
+export type ClientIpOptions = {
+  /** Si se omite, usa `getEnv().TRUST_PROXY`. */
+  trustProxy?: boolean;
+};
+
 /**
- * IP del cliente: el valor más a la derecha de `X-Forwarded-For`, que es el que
- * añade el proxy de confianza. Next solo completa la cabecera con la IP del
- * socket si el cliente no la envió, así que sin un proxy delante que la
- * sobrescriba o la extienda (Vercel, nginx, Caddy) este valor es falsificable.
- * Por eso los límites por correo y por guía, y el bloqueo por cuenta, no
- * dependen de la IP.
+ * IP del cliente para rate limiting y auditoría.
+ *
+ * Sin proxy de confianza ignora `X-Forwarded-For` / `X-Real-IP` (falsificables) y
+ * devuelve `direct`, de modo que dos peticiones con distinto XFF comparten la
+ * misma clave `rl:login:ip`.
+ *
+ * Con proxy de confianza (Vercel, nginx, Caddy) toma el valor más a la derecha
+ * de `X-Forwarded-For`, que es el que añade el proxy.
  */
-export function clientIp(request: Request): string {
+export function clientIp(request: Request, options?: ClientIpOptions): string {
+  const trustProxy = options?.trustProxy ?? getEnv().TRUST_PROXY;
+  if (!trustProxy) return DIRECT_CLIENT_IP;
+
   const forwarded = request.headers.get("x-forwarded-for");
   const last = forwarded?.split(",").at(-1)?.trim();
-  return last || request.headers.get("x-real-ip")?.trim() || "unknown";
+  return last || request.headers.get("x-real-ip")?.trim() || DIRECT_CLIENT_IP;
 }
 
 export function userAgent(request: Request): string | null {

@@ -35,7 +35,7 @@ Con el puerto 6543 la app desactiva las sentencias preparadas y abre como máxim
 
 ## Seguridad propia de Supabase
 
-- **RLS:** la migración `0005_enable_rls` activa Row Level Security en las 8 tablas sin crear políticas. La app conecta como dueña de las tablas y no la ve; la API REST de Supabase (roles `anon` y `authenticated`) no puede leer ni escribir nada.
+- **RLS:** `0005_enable_rls` activa RLS; `0006_runtime_role_force_rls` crea el rol `rutasegura_app` (sin `BYPASSRLS`), aplica `FORCE ROW LEVEL SECURITY` y otorga privilegios DML. La app en Vercel debe usar ese rol; migrate/seed usan el dueño (`DATABASE_URL_DIRECT`). Si el rol ya existía, la migración no cambia su contraseña: fíjala en el panel SQL antes o justo después.
 - **Data API:** la app no la usa. Para cerrarla del todo, en **Settings → Data API** quita `public` de los esquemas expuestos.
 - **Bucket:** privado, sin políticas de lectura pública. Las descargas solo funcionan con la URL firmada que emite la app (60 s).
 - **Llave S3:** tiene acceso total al almacenamiento del proyecto. Solo vive en `.env.supabase` (local, ignorado por Git) y en las variables de Vercel.
@@ -48,7 +48,7 @@ Todo sale de `.env.supabase` en la raíz del repositorio (lo ignora el patrón `
 ```bash
 set -a; source .env.supabase; set +a
 
-DATABASE_URL="$DATABASE_URL_DIRECT" pnpm db:migrate   # 0000 a 0005
+DATABASE_URL="$DATABASE_URL_DIRECT" pnpm db:migrate   # 0000 a 0006 (dueño)
 DATABASE_URL="$DATABASE_URL_DIRECT" pnpm db:seed      # guías, documentos y cuentas demo
 pnpm db:fixtures                                      # sube los 12 PDF a documents/<clave>
 ```
@@ -63,7 +63,7 @@ El `HMAC_SECRET` de la semilla debe ser exactamente el mismo que el de la app en
 | ---------------------------------------------------- | ---------------------------------------------------------------- |
 | `APP_ENV`                                            | `production`                                                     |
 | `NEXT_PUBLIC_APP_URL`                                | `https://<dominio>`                                              |
-| `DATABASE_URL`                                       | Pooler en modo transacción (6543)                                |
+| `DATABASE_URL`                                       | Pooler 6543 como rol `rutasegura_app` (no el dueño)              |
 | `REDIS_URL`                                          | `rediss://...` de Upstash                                        |
 | `SESSION_SECRET`, `CSRF_SECRET`, `HMAC_SECRET`       | Los de `.env.supabase`                                           |
 | `STORAGE_ENDPOINT`                                   | `https://arhieajljrwuwfnifjbf.storage.supabase.co/storage/v1/s3` |

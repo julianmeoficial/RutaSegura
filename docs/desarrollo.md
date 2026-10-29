@@ -46,7 +46,8 @@ Si ya tienes PostgreSQL o Redis instalados en la máquina, los puertos 5432 y 63
 ```bash
 POSTGRES_HOST_PORT=55432
 REDIS_HOST_PORT=56379
-DATABASE_URL=postgresql://rutasegura:local_only_change_me@localhost:55432/rutasegura
+DATABASE_URL=postgresql://rutasegura_app:local_only_change_me_app@localhost:55432/rutasegura
+DATABASE_URL_DIRECT=postgresql://rutasegura:local_only_change_me@localhost:55432/rutasegura
 REDIS_URL=redis://localhost:56379
 ```
 

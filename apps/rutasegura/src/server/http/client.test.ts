@@ -1,12 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { clientIp, readJson } from "./client";
+import { clientIp, DIRECT_CLIENT_IP, readJson } from "./client";
 
 describe("clientIp", () => {
-  it("toma el valor que añade el último salto, no el que envía el cliente", () => {
+  it("sin proxy de confianza ignora X-Forwarded-For y usa la misma clave directa", () => {
+    const a = new Request("http://localhost/", {
+      headers: { "x-forwarded-for": "1.2.3.4" },
+    });
+    const b = new Request("http://localhost/", {
+      headers: { "x-forwarded-for": "9.9.9.9" },
+    });
+    expect(clientIp(a, { trustProxy: false })).toBe(DIRECT_CLIENT_IP);
+    expect(clientIp(b, { trustProxy: false })).toBe(DIRECT_CLIENT_IP);
+  });
+
+  it("con proxy de confianza toma el valor que añade el último salto", () => {
     const request = new Request("http://localhost/", {
       headers: { "x-forwarded-for": "1.2.3.4, 10.0.0.7" },
     });
-    expect(clientIp(request)).toBe("10.0.0.7");
+    expect(clientIp(request, { trustProxy: true })).toBe("10.0.0.7");
   });
 });
 

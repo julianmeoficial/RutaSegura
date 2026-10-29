@@ -9,6 +9,7 @@ import { cookieNames } from "./cookies";
 import { authenticateAccessToken, type AuthResult } from "./require-user";
 
 async function isHttps(): Promise<boolean> {
+  if (process.env.APP_ENV === "production") return true;
   const requestHeaders = await headers();
   const forwarded = requestHeaders.get("x-forwarded-proto")?.split(",")[0]?.trim();
   if (forwarded) return forwarded === "https";

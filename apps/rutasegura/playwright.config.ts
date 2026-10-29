@@ -23,7 +23,7 @@ export default defineConfig({
     env: {
       APP_ENV: "development",
       NEXT_PUBLIC_APP_URL: `http://127.0.0.1:${PORT}`,
-      DATABASE_URL: "postgresql://rutasegura:local_only_change_me@127.0.0.1:5432/rutasegura",
+      DATABASE_URL: "postgresql://rutasegura_app:local_only_change_me_app@127.0.0.1:5432/rutasegura",
       REDIS_URL: "redis://127.0.0.1:6379",
       SESSION_SECRET: "e2e_only_secret_value_with_32_chars_min",
       CSRF_SECRET: "e2e_only_secret_value_with_32_chars_min",

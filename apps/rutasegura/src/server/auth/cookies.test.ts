@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { clearSessionCookies, cookieNames, readCookie, setSessionCookies } from "./cookies";
+import {
+  clearSessionCookies,
+  cookieNames,
+  isHttpsRequest,
+  readCookie,
+  setSessionCookies,
+} from "./cookies";
 
 const cookies = { accessToken: "at", accessMaxAge: 900, refreshToken: "rt", refreshMaxAge: 28800 };
 
@@ -21,6 +27,17 @@ describe("cookies de sesión", () => {
       expect(cookie).not.toContain("Secure");
     }
     expect(cookieNames(false)).toEqual({ access: "rs_at", refresh: "rs_rt" });
+  });
+
+  it("isHttpsRequest fuerza HTTPS cuando APP_ENV es production", () => {
+    const previous = process.env.APP_ENV;
+    process.env.APP_ENV = "production";
+    try {
+      expect(isHttpsRequest(new Request("http://localhost/"))).toBe(true);
+    } finally {
+      if (previous === undefined) delete process.env.APP_ENV;
+      else process.env.APP_ENV = previous;
+    }
   });
 
   it("el cierre de sesión expira ambas cookies", () => {

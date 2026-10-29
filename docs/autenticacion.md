@@ -104,7 +104,7 @@ Implementado en [`server/rate-limit`](../apps/rutasegura/src/server/rate-limit) 
 
 ### Requisito de despliegue: IP del cliente
 
-La IP sale del valor más a la derecha de `X-Forwarded-For`. Next solo completa esa cabecera con la IP del socket cuando el cliente no la envía, así que **sin un proxy delante que la sobrescriba o la extienda, la IP es falsificable**. Vercel, nginx (`$proxy_add_x_forwarded_for`) y Caddy lo hacen. Por eso ningún control crítico depende solo de la IP: el límite por correo, el límite por guía y el bloqueo por cuenta resisten IPs falsificadas, y una prueba smoke lo verifica.
+`clientIp` solo lee `X-Forwarded-For` / `X-Real-IP` cuando `TRUST_PROXY` es true (por defecto en `APP_ENV=production` o `preview`; en development es false). Sin proxy de confianza ignora esas cabeceras y usa la clave fija `direct`, así que dos logins con distinto `X-Forwarded-For` suman en la misma `rl:login:ip`. Detrás de Vercel, nginx o Caddy, deja `TRUST_PROXY=true` (o el default de production/preview). Ningún control crítico depende solo de la IP: el límite por correo, el límite por guía y el bloqueo por cuenta resisten IPs falsificadas.
 
 ## Rastreo de doble dato
 
@@ -150,4 +150,4 @@ Un fallo al escribir la bitácora se registra en el log, pero no tumba el login 
 ## Pendiente
 
 - 2FA TOTP opcional.
-- Rol de base de datos no dueño en producción para que la RLS se aplique, y purga de la bitácora a los 365 días.
+- Purga de la bitácora a los 365 días.
